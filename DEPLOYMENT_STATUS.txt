@@ -63,14 +63,16 @@ Branch: main (Clean, up to date with remote origin)
 Frontend Repository Source: https://github.com/Eric-Siju/UniGuard-AI/tree/main/frontend
 Backend Repository Source:  https://github.com/Eric-Siju/UniGuard-AI/tree/main/backend
 
-Deployment Status: READY FOR ONE-CLICK AUTHORIZATION & ACTIVATION
-- Frontend Production Build: COMPILED & VERIFIED (frontend/dist/)
+Deployment Status: FRONTEND DEPLOYED & LIVE | BACKEND BLUEPRINT READY
+- Frontend Production Build: COMPILED & LIVE ON VERCEL
 - Backend Production Server: CONFIGURED & VERIFIED (0.0.0.0:$PORT)
 - Model Artifacts: BUNDLED IN REPO (1.6 MB total, zero download required)
 - Automated Verification: 24/24 Unit/Integration Tests PASS, 10/10 Deployment Tests PASS
 
-Target Live URLs upon Account Authorization:
-- Vercel Frontend: https://uniguard-ai.vercel.app (or custom *.vercel.app)
+Live Production URLs:
+- Vercel Frontend: https://uniguard-ai-sih.vercel.app (Primary)
+                   https://uniguard-ai-bhai-code1.vercel.app
+                   https://frontend-kappa-navy-65.vercel.app
 - Render Service:  https://uniguard-ai.onrender.com
 
 --------------------------------------------------------------------------------
