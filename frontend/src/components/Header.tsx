@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Shield, Play, Pause, Square, Activity, Radio, FastForward, CheckCircle2, AlertOctagon } from "lucide-react"
+import { Shield, Play, Pause, Square, Activity, Radio, FastForward, CheckCircle2, AlertOctagon, EyeOff, Award } from "lucide-react"
 import { startDemoStream, pauseDemoStream, resumeDemoStream, stopDemoStream } from "../services/api"
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   activeScenario: string
   wsConnected: boolean
   onStreamStateChange: (state: string, scenario: string, speed: number) => void
+  onOpenJudgeMode?: () => void
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,7 +16,8 @@ export const Header: React.FC<HeaderProps> = ({
   streamSpeed,
   activeScenario,
   wsConnected,
-  onStreamStateChange
+  onStreamStateChange,
+  onOpenJudgeMode
 }) => {
   const [scenario, setScenario] = useState(activeScenario)
   const [speed, setSpeed] = useState(streamSpeed)
@@ -83,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
             </p>
           </div>
 
-          {/* Three Mandatory Passive Compliance Badges */}
+          {/* Four Mandatory Passive Compliance Badges */}
           <div className="hidden xl:flex items-center gap-2 pl-4 border-l border-slate-800">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/50 border border-emerald-800/60 text-emerald-400 text-[11px] font-bold tracking-wide">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -91,13 +93,30 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky-950/50 border border-sky-800/60 text-sky-400 text-[11px] font-bold tracking-wide">
               <CheckCircle2 className="w-3.5 h-3.5 text-sky-400" />
-              READ-ONLY MONITORING
+              READ-ONLY
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-950/50 border border-amber-800/60 text-amber-400 text-[11px] font-bold tracking-wide">
               <AlertOctagon className="w-3.5 h-3.5 text-amber-400" />
               NO ACTIVE RESPONSE
             </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-950/50 border border-purple-800/60 text-purple-400 text-[11px] font-bold tracking-wide">
+              <EyeOff className="w-3.5 h-3.5 text-purple-400" />
+              NO PAYLOAD DECRYPTION
+            </div>
           </div>
+        </div>
+
+        {/* Action Controls & Judge Mode */}
+        <div className="flex flex-wrap items-center gap-3">
+          {onOpenJudgeMode && (
+            <button
+              onClick={onOpenJudgeMode}
+              className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all cursor-pointer"
+            >
+              <Award className="w-4 h-4 fill-current" />
+              JUDGE MODE
+            </button>
+          )}
         </div>
 
         {/* Live Streaming Control Bar */}

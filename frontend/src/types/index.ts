@@ -51,6 +51,104 @@ export interface Alert {
   contributing_features: ContributingFeature[]
   flow_id: string
   acknowledged?: boolean
+  status?: "NEW" | "ACKNOWLEDGED" | "INVESTIGATING" | "RESOLVED"
+  analyst_note?: string
+  tags?: string[]
+  occurrences?: number
+  first_seen?: string
+  last_seen?: string
+  suppressed_count?: number
+  mitre_technique_id?: string
+  mitre_technique_name?: string
+  mitre_tactic?: string
+  baseline_deviation?: string
+  threat_intel_match?: any
+}
+
+export interface Case {
+  id?: number
+  case_id: string
+  title: string
+  description: string
+  status: "OPEN" | "INVESTIGATING" | "CLOSED"
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  created_at: string
+  updated_at: string
+  related_alerts: string[]
+  related_assets: string[]
+  analyst_notes: Array<{ timestamp: string; author: string; note: string }>
+  tags: string[]
+}
+
+export interface AssetRiskFactor {
+  factor: string
+  points: number
+  description: string
+}
+
+export interface Asset {
+  ip: string
+  role: string
+  first_observed: string
+  last_observed: string
+  bytes_in: number
+  bytes_out: number
+  flows_count: number
+  unique_ports: number
+  destinations_count: number
+  threat_count: number
+  risk_score: number
+  risk_level: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  risk_factors: AssetRiskFactor[]
+}
+
+export interface ThreatIntelIndicator {
+  id?: number
+  indicator_type: string
+  indicator: string
+  description: string
+  source: string
+  severity: string
+  created_at?: string
+}
+
+export interface DataSourceInfo {
+  source: string
+  type: string
+  status: string
+  records_received: number
+  records_parsed: number
+  records_rejected: number
+  last_event: string
+  processing_rate: string
+  errors: string[]
+}
+
+export interface AttackCampaign {
+  campaign_id: string
+  title: string
+  entity_ip: string
+  threat_count: number
+  distinct_stages: number
+  campaign_risk: number
+  status: string
+  phases: Array<{
+    phase_name: string
+    threat_type: string
+    tactic: string
+    description: string
+  }>
+  timeline: Array<{
+    alert_id: string
+    threat_type: string
+    severity: string
+    timestamp: string
+    target: string
+    evidence: string[]
+  }>
+  created_at: string
+  updated_at: string
+  recommended_action: string
 }
 
 export interface SystemStats {

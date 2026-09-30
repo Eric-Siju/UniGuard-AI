@@ -4,12 +4,19 @@ import { Navigation, TabType } from "./components/Navigation"
 import { DashboardPage } from "./pages/DashboardPage"
 import { InvestigationPage } from "./pages/InvestigationPage"
 import { TrafficAnalysisPage } from "./pages/TrafficAnalysisPage"
+import { ThreatHuntPage } from "./pages/ThreatHuntPage"
+import { AssetsPage } from "./pages/AssetsPage"
+import { CasesPage } from "./pages/CasesPage"
+import { CampaignsPage } from "./pages/CampaignsPage"
+import { ThreatIntelPage } from "./pages/ThreatIntelPage"
 import { ModelPage } from "./pages/ModelPage"
 import { ReplayPage } from "./pages/ReplayPage"
 import { ReportPage } from "./pages/ReportPage"
 import { BenchmarkPage } from "./pages/BenchmarkPage"
+import { DataSourcesPage } from "./pages/DataSourcesPage"
 import { CompliancePage } from "./pages/CompliancePage"
 import { SettingsPage } from "./pages/SettingsPage"
+import { JudgeModeModal } from "./components/JudgeModeModal"
 
 import { SystemStats, Alert, ThreatSummary } from "./types"
 import {
@@ -22,6 +29,8 @@ import {
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>("dashboard")
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null)
+  const [huntSearchIp, setHuntSearchIp] = useState<string>("")
+  const [isJudgeModeOpen, setIsJudgeModeOpen] = useState<boolean>(false)
   
   const [stats, setStats] = useState<SystemStats>({
     flows_processed: 0,
@@ -111,6 +120,11 @@ export const App: React.FC = () => {
     setActiveTab("investigation")
   }
 
+  const handleNavigateToHunt = (ip: string) => {
+    setHuntSearchIp(ip)
+    setActiveTab("hunt")
+  }
+
   const handleStreamStateChange = (state: string, scenario: string, speed: number) => {
     setStreamState(state)
     setActiveScenario(scenario)
@@ -126,6 +140,7 @@ export const App: React.FC = () => {
         activeScenario={activeScenario}
         wsConnected={wsConnected}
         onStreamStateChange={handleStreamStateChange}
+        onOpenJudgeMode={() => setIsJudgeModeOpen(true)}
       />
 
       {/* Primary Tab Navigation */}
@@ -136,7 +151,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content View */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4">
         {activeTab === "dashboard" && (
           <DashboardPage
             stats={stats}
@@ -153,10 +168,36 @@ export const App: React.FC = () => {
             alerts={alerts}
             onBack={() => setActiveTab("dashboard")}
             onSelectAlert={(id) => setSelectedAlertId(id)}
+            onNavigateToCase={() => setActiveTab("cases")}
           />
         )}
 
         {activeTab === "flows" && <TrafficAnalysisPage />}
+
+        {activeTab === "hunt" && (
+          <ThreatHuntPage
+            initialSearchIp={huntSearchIp}
+            onSelectAlert={handleSelectAlert}
+            onSelectAsset={handleNavigateToHunt}
+          />
+        )}
+
+        {activeTab === "assets" && (
+          <AssetsPage
+            onNavigateToHunt={handleNavigateToHunt}
+          />
+        )}
+
+        {activeTab === "cases" && <CasesPage />}
+
+        {activeTab === "campaigns" && (
+          <CampaignsPage
+            onSelectAlert={handleSelectAlert}
+            onSelectAsset={handleNavigateToHunt}
+          />
+        )}
+
+        {activeTab === "threat-intel" && <ThreatIntelPage />}
 
         {activeTab === "models" && <ModelPage />}
 
@@ -175,10 +216,20 @@ export const App: React.FC = () => {
 
         {activeTab === "benchmark" && <BenchmarkPage />}
 
+        {activeTab === "datasources" && <DataSourcesPage />}
+
         {activeTab === "compliance" && <CompliancePage />}
 
         {activeTab === "settings" && <SettingsPage />}
       </main>
+
+      {/* Judge Mode Modal */}
+      <JudgeModeModal
+        isOpen={isJudgeModeOpen}
+        onClose={() => setIsJudgeModeOpen(false)}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+        onStreamStateChange={handleStreamStateChange}
+      />
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950/80 px-6 py-4 text-center text-xs text-slate-500 font-mono">
@@ -187,3 +238,4 @@ export const App: React.FC = () => {
     </div>
   )
 }
+

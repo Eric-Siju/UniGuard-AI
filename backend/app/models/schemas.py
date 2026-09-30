@@ -53,9 +53,110 @@ class AlertSchema(BaseModel):
     contributing_features: List[Dict[str, Any]] = []
     flow_id: str
     acknowledged: bool = False
+    
+    # Enhanced SOC fields
+    status: Optional[str] = "NEW"
+    analyst_note: Optional[str] = ""
+    tags: Optional[List[str]] = []
+    updated_at: Optional[datetime] = None
+    occurrences: Optional[int] = 1
+    first_seen: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
+    suppressed_count: Optional[int] = 0
+    mitre_technique_id: Optional[str] = None
+    mitre_technique_name: Optional[str] = None
+    mitre_tactic: Optional[str] = None
+    baseline_deviation: Optional[str] = None
+    threat_intel_match: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
+
+class AlertLifecycleUpdate(BaseModel):
+    status: Optional[str] = None  # NEW, ACKNOWLEDGED, INVESTIGATING, RESOLVED
+    analyst_note: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+class CaseCreateRequest(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    severity: Optional[str] = "MEDIUM"
+    related_alerts: Optional[List[str]] = []
+    related_assets: Optional[List[str]] = []
+    tags: Optional[List[str]] = []
+    analyst_note: Optional[str] = None
+
+class CaseUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    severity: Optional[str] = None
+    tags: Optional[List[str]] = None
+    new_note: Optional[str] = None
+    add_alerts: Optional[List[str]] = None
+    remove_alerts: Optional[List[str]] = None
+
+class CaseSchema(BaseModel):
+    id: Optional[int] = None
+    case_id: str
+    title: str
+    description: str
+    status: str
+    severity: str
+    created_at: datetime
+    updated_at: datetime
+    related_alerts: List[str] = []
+    related_assets: List[str] = []
+    analyst_notes: List[Dict[str, Any]] = []
+    tags: List[str] = []
+
+    class Config:
+        from_attributes = True
+
+class ThreatIntelIndicatorSchema(BaseModel):
+    id: Optional[int] = None
+    indicator_type: str
+    indicator: str
+    description: Optional[str] = ""
+    source: Optional[str] = "Local Threat Intel"
+    severity: Optional[str] = "HIGH"
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class AssetRiskFactor(BaseModel):
+    factor: str
+    points: float
+    description: str
+
+class AssetSchema(BaseModel):
+    ip: str
+    role: str  # SERVER, CLIENT, DNS, GATEWAY, SUSPICIOUS, UNKNOWN (Inferred)
+    first_observed: str
+    last_observed: str
+    bytes_in: int
+    bytes_out: int
+    flows_count: int
+    unique_ports: int
+    destinations_count: int
+    threat_count: int
+    risk_score: float
+    risk_level: str  # LOW, MEDIUM, HIGH, CRITICAL
+    risk_factors: List[AssetRiskFactor] = []
+
+class ThreatHuntQuery(BaseModel):
+    time_window: Optional[str] = "all"  # 15m, 1h, 6h, 24h, all
+    src_ip: Optional[str] = None
+    dst_ip: Optional[str] = None
+    src_port: Optional[int] = None
+    dst_port: Optional[int] = None
+    protocol: Optional[str] = None
+    threat_type: Optional[str] = None
+    severity: Optional[str] = None
+    is_encrypted: Optional[bool] = None
+    limit: Optional[int] = 50
+    offset: Optional[int] = 0
 
 class ThreatSummarySchema(BaseModel):
     total_threats: int

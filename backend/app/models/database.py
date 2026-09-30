@@ -71,6 +71,62 @@ class Alert(Base):
     contributing_features = Column(JSON, default=list)
     flow_id = Column(String(64), index=True)
     acknowledged = Column(Boolean, default=False)
+    
+    # Enhanced SOC Lifecycle & MITRE ATT&CK Tracking
+    status = Column(String(20), default="NEW", index=True)  # NEW, ACKNOWLEDGED, INVESTIGATING, RESOLVED
+    analyst_note = Column(Text, default="")
+    tags = Column(JSON, default=list)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow)
+    occurrences = Column(Integer, default=1)
+    first_seen = Column(DateTime, default=datetime.datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.datetime.utcnow)
+    suppressed_count = Column(Integer, default=0)
+    mitre_technique_id = Column(String(20), nullable=True)
+    mitre_technique_name = Column(String(100), nullable=True)
+    mitre_tactic = Column(String(50), nullable=True)
+    baseline_deviation = Column(String(255), nullable=True)
+    threat_intel_match = Column(JSON, nullable=True)
+
+class Case(Base):
+    __tablename__ = "cases"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    case_id = Column(String(64), unique=True, index=True)
+    title = Column(String(255))
+    description = Column(Text, default="")
+    status = Column(String(20), default="OPEN", index=True)  # OPEN, INVESTIGATING, CLOSED
+    severity = Column(String(20), default="MEDIUM", index=True)  # LOW, MEDIUM, HIGH, CRITICAL
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow)
+    related_alerts = Column(JSON, default=list)
+    related_assets = Column(JSON, default=list)
+    analyst_notes = Column(JSON, default=list)
+    tags = Column(JSON, default=list)
+
+class ThreatIntelIndicator(Base):
+    __tablename__ = "threat_intel"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    indicator_type = Column(String(20), index=True)  # IP, DOMAIN, SNI
+    indicator = Column(String(255), unique=True, index=True)
+    description = Column(String(255), default="")
+    source = Column(String(100), default="Local Threat Intelligence")
+    severity = Column(String(20), default="HIGH")  # LOW, MEDIUM, HIGH, CRITICAL
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class DataSourceLog(Base):
+    __tablename__ = "data_source_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    source_name = Column(String(50), index=True)
+    source_type = Column(String(50))
+    status = Column(String(20), default="READY")  # READY, ONLINE, OFFLINE, ERROR
+    records_received = Column(Integer, default=0)
+    records_parsed = Column(Integer, default=0)
+    records_rejected = Column(Integer, default=0)
+    parsing_errors = Column(JSON, default=list)
+    last_event_time = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class ThreatEvent(Base):
     __tablename__ = "threat_events"
@@ -121,3 +177,39 @@ class ModelMetadata(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # Check and add any missing columns in alerts table for backward compatibility
+    import sqlite3
+    from backend.app.core.config import DATABASE_PATH
+    if DATABASE_PATH.exists():
+        conn = sqlite3.connect(str(DATABASE_PATH))
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(alerts)")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+        new_cols = [
+            ("status", "VARCHAR(20) DEFAULT 'NEW'"),
+            ("analyst_note", "TEXT DEFAULT ''"),
+            ("tags", "JSON DEFAULT '[]'"),
+            ("updated_at", "DATETIME"),
+            ("occurrences", "INTEGER DEFAULT 1"),
+            ("first_seen", "DATETIME"),
+            ("last_seen", "DATETIME"),
+            ("suppressed_count", "INTEGER DEFAULT 0"),
+            ("mitre_technique_id", "VARCHAR(20)"),
+            ("mitre_technique_name", "VARCHAR(100)"),
+            ("mitre_tactic", "VARCHAR(50)"),
+            ("baseline_deviation", "VARCHAR(255)"),
+            ("threat_intel_match", "JSON")
+        ]
+        for col_name, col_def in new_cols:
+            if col_name not in existing_cols:
+                try:
+                    cursor.execute(f"ALTER TABLE alerts ADD COLUMN {col_name} {col_def}")
+                except Exception:
+                    pass
+        conn.commit()
+        conn.close()
+
+# Auto-initialize database tables on module import
+init_db()
+
+

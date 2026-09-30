@@ -19,6 +19,7 @@ from backend.app.engine.feature_extractor import extract_flow_features
 from backend.app.engine.rules import RuleEngine
 from backend.app.engine.ml_detector import ml_detector
 from backend.app.engine.correlator import threat_correlator
+from backend.app.engine.dedup import deduplicator
 
 class StreamingEngine:
     def __init__(self):
@@ -210,34 +211,8 @@ class StreamingEngine:
                     
                     alert_dict = None
                     if alert:
-                        self.stats["threats_detected"] += 1
-                        alert_rec = Alert(
-                            alert_id=alert.alert_id,
-                            timestamp=current_iso,
-                            threat_type=alert.threat_type,
-                            severity=alert.severity,
-                            confidence=alert.confidence,
-                            risk_score=alert.risk_score,
-                            src_ip=alert.src_ip,
-                            dst_ip=alert.dst_ip,
-                            src_port=alert.src_port,
-                            dst_port=alert.dst_port,
-                            protocol=alert.protocol,
-                            duration=alert.duration,
-                            total_bytes=alert.total_bytes,
-                            total_packets=alert.total_packets,
-                            evidence=alert.evidence,
-                            rule_matches=alert.rule_matches,
-                            ml_prediction=alert.ml_prediction,
-                            ml_confidence=alert.ml_confidence,
-                            contributing_features=alert.contributing_features,
-                            flow_id=alert.flow_id
-                        )
-                        db.add(alert_rec)
-                        
-                        alert_dict = {
+                        raw_alert_dict = {
                             "alert_id": alert.alert_id,
-                            "timestamp": current_iso.isoformat(),
                             "threat_type": alert.threat_type,
                             "severity": alert.severity,
                             "confidence": alert.confidence,
@@ -247,8 +222,89 @@ class StreamingEngine:
                             "src_port": alert.src_port,
                             "dst_port": alert.dst_port,
                             "protocol": alert.protocol,
+                            "duration": alert.duration,
+                            "total_bytes": alert.total_bytes,
+                            "total_packets": alert.total_packets,
                             "evidence": alert.evidence,
-                            "contributing_features": alert.contributing_features
+                            "rule_matches": alert.rule_matches,
+                            "ml_prediction": alert.ml_prediction,
+                            "ml_confidence": alert.ml_confidence,
+                            "contributing_features": alert.contributing_features,
+                            "flow_id": alert.flow_id,
+                            "mitre_technique_id": alert.mitre_technique_id,
+                            "mitre_technique_name": alert.mitre_technique_name,
+                            "mitre_tactic": alert.mitre_tactic,
+                            "baseline_deviation": alert.baseline_deviation,
+                            "threat_intel_match": alert.threat_intel_match
+                        }
+                        
+                        dedup_alert, is_new = deduplicator.process(raw_alert_dict)
+                        
+                        if is_new:
+                            self.stats["threats_detected"] += 1
+                            alert_rec = Alert(
+                                alert_id=dedup_alert["alert_id"],
+                                timestamp=current_iso,
+                                threat_type=dedup_alert["threat_type"],
+                                severity=dedup_alert["severity"],
+                                confidence=dedup_alert["confidence"],
+                                risk_score=dedup_alert["risk_score"],
+                                src_ip=dedup_alert["src_ip"],
+                                dst_ip=dedup_alert["dst_ip"],
+                                src_port=dedup_alert["src_port"],
+                                dst_port=dedup_alert["dst_port"],
+                                protocol=dedup_alert["protocol"],
+                                duration=dedup_alert["duration"],
+                                total_bytes=dedup_alert["total_bytes"],
+                                total_packets=dedup_alert["total_packets"],
+                                evidence=dedup_alert["evidence"],
+                                rule_matches=dedup_alert["rule_matches"],
+                                ml_prediction=dedup_alert["ml_prediction"],
+                                ml_confidence=dedup_alert["ml_confidence"],
+                                contributing_features=dedup_alert["contributing_features"],
+                                flow_id=dedup_alert["flow_id"],
+                                status="NEW",
+                                occurrences=dedup_alert.get("occurrences", 1),
+                                first_seen=current_iso,
+                                last_seen=current_iso,
+                                suppressed_count=0,
+                                mitre_technique_id=dedup_alert.get("mitre_technique_id"),
+                                mitre_technique_name=dedup_alert.get("mitre_technique_name"),
+                                mitre_tactic=dedup_alert.get("mitre_tactic"),
+                                baseline_deviation=dedup_alert.get("baseline_deviation"),
+                                threat_intel_match=dedup_alert.get("threat_intel_match")
+                            )
+                            db.add(alert_rec)
+                        else:
+                            existing = db.query(Alert).filter(Alert.alert_id == dedup_alert["alert_id"]).first()
+                            if existing:
+                                existing.occurrences = dedup_alert.get("occurrences", existing.occurrences + 1)
+                                existing.suppressed_count = dedup_alert.get("suppressed_count", existing.suppressed_count + 1)
+                                existing.last_seen = current_iso
+                                existing.evidence = dedup_alert.get("evidence", existing.evidence)
+
+                        alert_dict = {
+                            "alert_id": dedup_alert["alert_id"],
+                            "timestamp": current_iso.isoformat(),
+                            "threat_type": dedup_alert["threat_type"],
+                            "severity": dedup_alert["severity"],
+                            "confidence": dedup_alert["confidence"],
+                            "risk_score": dedup_alert["risk_score"],
+                            "src_ip": dedup_alert["src_ip"],
+                            "dst_ip": dedup_alert["dst_ip"],
+                            "src_port": dedup_alert["src_port"],
+                            "dst_port": dedup_alert["dst_port"],
+                            "protocol": dedup_alert["protocol"],
+                            "evidence": dedup_alert["evidence"],
+                            "contributing_features": dedup_alert["contributing_features"],
+                            "status": "NEW",
+                            "occurrences": dedup_alert.get("occurrences", 1),
+                            "suppressed_count": dedup_alert.get("suppressed_count", 0),
+                            "mitre_technique_id": dedup_alert.get("mitre_technique_id"),
+                            "mitre_technique_name": dedup_alert.get("mitre_technique_name"),
+                            "mitre_tactic": dedup_alert.get("mitre_tactic"),
+                            "baseline_deviation": dedup_alert.get("baseline_deviation"),
+                            "threat_intel_match": dedup_alert.get("threat_intel_match")
                         }
                     elif ml_result.get("is_anomaly", False):
                         self.stats["suspicious_flows"] += 1

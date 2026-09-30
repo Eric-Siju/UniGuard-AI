@@ -1,105 +1,74 @@
-# SIH Judge Demonstration Walkthrough (docs/demo.md)
+# SIH Judge Demonstration Walkthrough (`docs/demo.md`)
 
-Follow this step-by-step walkthrough to demonstrate the full capabilities of UniGuard AI for Smart India Hackathon 2026 problem statement SIH26145.
-
----
-
-## 1. Launch Verification (SOC Overview)
-1. Open Google Chrome to **`http://127.0.0.1:8000`** (the single official production application).
-2. Observe the top header:
-   - **UniGuard AI** Branding & Problem Statement SIH26145 badge.
-   - Three bold compliance badges:
-     - `● PASSIVE MODE`
-     - `● READ-ONLY MONITORING`
-     - `● NO ACTIVE RESPONSE`
-   - WebSocket Connection Pill shows `● LIVE WS` in bright green.
+This guide provides the official presentation script and walkthrough for demonstrating **UniGuard AI** to the evaluators for Smart India Hackathon 2026 problem statement **SIH26145**.
 
 ---
 
-## 2. Trigger Real-Time Traffic Stream
-1. In the top streaming control bar, select scenario:
-   `Combined Attack Wave (Demo)`
-2. Click the **START DEMO** button.
-3. Watch the dashboard dynamically react without manual page refresh:
-   - **Flows Processed** and **Packet Velocity** counters immediately begin updating.
-   - **Live Unidirectional Traffic Rate** chart draws real-time packet velocity peaks.
-   - **Live Security Incidents Feed** begins populating with correlated threat alerts as attacks emerge.
-   - The **Detected Threat Classes** chart updates dynamically.
+## Quick Launch
+```powershell
+# In Windows PowerShell:
+.\.venv\Scripts\python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+Open **`http://127.0.0.1:8000`** in Google Chrome.
 
 ---
 
-## 3. Test Variable Playback Speed & Controls
-1. Click `2x`, `5x`, or `10x` in the speed selector to observe high-throughput processing.
-2. Click **PAUSE** &mdash; notice the simulation halts instantly and the status indicator reflects `PAUSED`.
-3. Click **RESUME** &mdash; streaming continues smoothly.
+## Presentation Method 1: The Guided 12-Step "Judge Mode" (Recommended)
+
+Click the gold **JUDGE MODE** button in the top header. This opens a modal that guides the panel through the complete defense narrative step-by-step:
+
+| Step | Title | Target Tab | What It Demonstrates |
+|---|---|---|---|
+| **1** | Architecture Verification | `compliance` | Shows one-way optical tap architecture and four compliance badges (`PASSIVE`, `READ-ONLY`, `NO ACTIVE RESPONSE`, `NO PAYLOAD DECRYPTION`). |
+| **2** | Normal Traffic Baseline | `dashboard` | Runs normal baseline flows. Shows behavioral engine in `LEARNING BASELINE` state without raising false alarms. |
+| **3** | Phase 1: Port Scan Reconnaissance | `dashboard` | Triggers synthetic reconnaissance sweep. Alert generated with MITRE T1046 mapping and deduplication. |
+| **4** | Phase 2: Botnet C2 Beaconing | `investigation` | Triggers periodic heartbeat beacons. Proves strict IAT jitter calculation distinguishes beacons from normal HTTPS. |
+| **5** | Phase 3: DGA & DNS Tunneling | `investigation` | Triggers high-entropy domain lookups. Shows Shannon entropy (>3.5 bits) and query length features. |
+| **6** | Phase 4: Data Exfiltration | `investigation` | Triggers asymmetric outbound egress. Flags extreme outbound-to-inbound byte ratios. |
+| **7** | Multi-Signal Consensus & XAI | `investigation` | Shows the 5-way pipeline (Rule + ML + Anomaly + Baseline + Intel) with exact plain-language reasoning. |
+| **8** | Passive Asset Inventory & Entity Risk | `assets` | Displays assets inferred from traffic. Shows explainable 0–100 risk score with mathematical factor breakdown. |
+| **9** | Multi-Stage Campaign Correlation | `campaigns` | Demonstrates how 4 separate alerts against one entity are correlated into an intrusion campaign story. |
+| **10** | SOC Case Management & Dossier | `cases` | Escalates an alert to a formal Case. Adds analyst notes, sets status to `INVESTIGATING`, and exports a `.txt` dossier. |
+| **11** | Passive Threat Hunting Console | `hunt` | Demonstrates analyst queries by IP, port, protocol, and severity with one-click pivots. |
+| **12** | Model Lab & Hardware Benchmark | `benchmark` | Executes real on-hardware timing benchmark (e.g. 0.015ms feature extraction, 13+ flows/sec). |
 
 ---
 
-## 4. Deep Forensic Alert Investigation (Explainable AI)
-1. In the **Live Security Incidents Feed**, locate any high-severity alert (e.g. `Port Scan` or `DDoS` or `Data Exfiltration`).
-2. Click the **Investigate ?** button on the right of the alert row.
-3. The application transitions into the **Security Incident Investigation Console**:
-   - Inspect the **5-Tuple Endpoints** (Source IP, Destination IP:Port, Protocol, Total Payload).
-   - Review the **Corroborating Evidence & Behavioral Signals** box. Notice the exact human-readable reasons (e.g. *"45 destination ports contacted by source"*, *"SYN ratio 95.0%"*).
-   - Review **Explainable AI (XAI) Feature Attribution**: See the exact mathematical feature deviations driving the Random Forest classification along with relative impact percentages.
-   - Inspect the **Contextual Flow Timeline** showing chronological preceding and succeeding sessions.
+## Presentation Method 2: Manual Feature-by-Feature Walkthrough
 
----
+### 1. Header & One-Way Assurance
+- Point out the 4 mandatory passive badges in the header.
+- Navigate to the **One-Way Diode** tab to review the architecture diagram and telemetry health counters.
 
-## 5. Traffic Analysis & PCAP / CSV Ingestion
-1. Switch to the **Traffic Analysis** tab.
-2. Filter flows by Protocol (`TCP`, `UDP`, `DNS`, `TLS`) or Threat Category (`DDoS`, `Botnet C2`).
-3. Use the search bar to filter by IP address (e.g., `192.168.1.185` or `10.0.1.50`).
-4. Click **Upload PCAP / CSV**:
-   - Upload any custom flow dataset or packet capture.
-   - The system automatically parses headers passively without active network contact.
+### 2. Ingestion & Interoperability
+- Navigate to **Data Sources**.
+- Demonstrate the ready state of all 6 NSM ingestion adapters (Demo Stream, CSV Upload, PCAP Parser, Zeek JSON Adapter, Suricata EVE Adapter, Threat Intel).
+- Show that sample Zeek logs or Suricata EVE logs can be uploaded and normalized locally without requiring third-party enterprise clusters.
 
----
+### 3. Live Streaming & Deduplication
+- Start the `Combined Attack Wave` at `2x` or `5x` speed.
+- Observe live alerts appearing in the feed. Point out that repeated identical events are grouped (e.g. `Occurrences: 12`, `Suppressed: 11`) rather than flooding the analyst's screen.
 
-## 6. Model Verification & Live Retraining
-1. Switch to the **ML & Datasets** tab.
-2. Review the verified model evaluation metrics:
-   - Accuracy: `99.83%`
-   - F1-Score: `0.9983`
-   - False Positive Rate: `< 0.2%`
-3. Inspect the **Confusion Matrix Heatmap** verifying zero leakage between threat classes.
-4. Inspect the **Top Discriminating Feature Weights** chart.
-5. Click **RETRAIN MODEL** &mdash; observe the live training spinner and instantaneous metric re-evaluation.
+### 4. Alert Triage & Explainable AI
+- Click **Investigate** on an alert.
+- Review the **Detection Pipeline**:
+  - Rule Engine: `MATCH`
+  - Random Forest: `98.0%`
+  - Anomaly Detector: `HIGH`
+  - Threat Intel: `MATCH` or `NONE`
+  - Baseline Deviation: `+1005%`
+- Review the plain-English explanation: *"Observed 45 unique destination ports, connection frequency 15.0/s exceeded baseline by 8.4x"*.
 
----
+### 5. Case Management
+- Click **Escalate to Case** from the investigation view.
+- Give the case a title (e.g. *"APT-Reconnaissance Incident #26145"*).
+- Add an analyst note and export the formal investigation dossier.
 
-## 7. Replay Mode & Attack Scenarios
-1. Switch to the **Replay Mode** tab.
-2. Click any of the dedicated threat scenario cards:
-   - `Volumetric & SYN Flood Swarm`
-   - `Reconnaissance Port Sweeps`
-   - `Botnet C2 Periodic Beaconing`
-   - `DGA & DNS Tunneling Exfiltration`
-   - `Suspicious Encrypted Covert Channel`
-   - `High-Volume Data Exfiltration`
-3. The selected scenario begins replaying with live counters and immediate alert generation.
+### 6. Threat Hunting
+- Navigate to **Threat Hunt**.
+- Filter by `Protocol: TCP` and `Severity: HIGH`.
+- Pivot to any source IP to instantly view all historical communications and asset profile.
 
----
-
-## 8. Performance Benchmark Verification
-1. Switch to the **Benchmark** tab.
-2. Click **RUN LIVE HARDWARE BENCHMARK**.
-3. The system executes real local timing loops:
-   - Measures Feature Extraction Latency (`~0.012 ms / flow`)
-   - Measures ML Inference Latency (`~74 ms / flow`)
-   - Measures Pipeline Throughput (`~13.4 flows / sec`)
-   - Captures process memory footprint and CPU load.
-   - Prominently labeled: *"Measured on this development machine. Never fabricated."*
-
----
-
-## 9. Security Audit Report Generation
-1. Switch to the **Security Reports** tab.
-2. Observe the fully formatted Executive Security Audit Report.
-3. Click **Print / Export PDF** to trigger the browser's native print preview dialog for a polished PDF export.
-
----
-
-## 10. Compliance & Data Diode Architecture
-1. Switch to the **Compliance & Diode** tab.
-2. Review the technical declaration and physical topology diagram explaining why UniGuard AI satisfies all mandatory requirements of SIH26145.
+### 7. Performance & Reporting
+- Navigate to **Benchmark** and click **Run Live Hardware Benchmark**. Explain that numbers are measured on the physical machine, never fabricated.
+- Navigate to **Reports** and print or export the PDF executive summary.

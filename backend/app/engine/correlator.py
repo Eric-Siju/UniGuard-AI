@@ -10,6 +10,51 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 
 from backend.app.engine.rules import RuleMatch
+from backend.app.engine.threat_intel import threat_intel
+from backend.app.engine.baseline import baseline_engine
+
+MITRE_MAPPINGS = {
+    "Port Scan": {
+        "technique_id": "T1046",
+        "technique_name": "Network Service Discovery",
+        "tactic": "Discovery"
+    },
+    "Botnet C2": {
+        "technique_id": "T1071",
+        "technique_name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+    },
+    "DGA / DNS Tunneling": {
+        "technique_id": "T1071.004",
+        "technique_name": "DNS",
+        "tactic": "Command and Control"
+    },
+    "DDoS": {
+        "technique_id": "T1498",
+        "technique_name": "Network Denial of Service",
+        "tactic": "Impact"
+    },
+    "Suspicious Encrypted": {
+        "technique_id": "T1573",
+        "technique_name": "Encrypted Channel",
+        "tactic": "Command and Control"
+    },
+    "Suspicious Encrypted Traffic": {
+        "technique_id": "T1573",
+        "technique_name": "Encrypted Channel",
+        "tactic": "Command and Control"
+    },
+    "Data Exfiltration": {
+        "technique_id": "T1041",
+        "technique_name": "Exfiltration Over C2 Channel",
+        "tactic": "Exfiltration"
+    },
+    "Suspicious Zero-Day Anomaly": {
+        "technique_id": "T1205",
+        "technique_name": "Traffic Signaling",
+        "tactic": "Defense Evasion"
+    }
+}
 
 @dataclass
 class CorrelatedThreat:
@@ -34,11 +79,16 @@ class CorrelatedThreat:
     total_bytes: int
     total_packets: int
     anomaly_score: float
+    mitre_technique_id: Optional[str] = None
+    mitre_technique_name: Optional[str] = None
+    mitre_tactic: Optional[str] = None
+    baseline_deviation: Optional[str] = None
+    threat_intel_match: Optional[Dict[str, Any]] = None
 
 class ThreatCorrelator:
     """
     Transparent Correlation Engine.
-    Combines rule evidence, ML probabilities, and anomaly detection.
+    Combines rule evidence, ML probabilities, anomaly detection, local threat intel, and baseline deviations.
     """
     def correlate(
         self,
@@ -48,13 +98,20 @@ class ThreatCorrelator:
         ml_result: Dict[str, Any]
     ) -> Optional[CorrelatedThreat]:
         
+        # 1. Update and evaluate host baseline deviation
+        baseline_engine.record_flow(flow, features)
+        baseline_dev = baseline_engine.evaluate_deviation(flow, features)
+
+        # 2. Passively check local offline threat intelligence
+        intel_match = threat_intel.check_flow(flow)
+
         ml_class = ml_result.get("prediction", "Normal")
         ml_conf = float(ml_result.get("confidence", 0.0))
         anomaly_score = float(ml_result.get("anomaly_score", 0.0))
         is_anomaly = ml_result.get("is_anomaly", False)
         
-        # If no rules fired, ML predicts Normal, and no anomaly -> benign traffic
-        if not rule_matches and ml_class == "Normal" and not is_anomaly:
+        # If no rules fired, ML predicts Normal, no anomaly, and no threat intel match -> benign traffic
+        if not rule_matches and ml_class == "Normal" and not is_anomaly and not intel_match:
             return None
             
         evidence_list = []
@@ -78,7 +135,6 @@ class ThreatCorrelator:
             
             # Corroboration check: Did ML model agree with the rule?
             if ml_class == threat_type:
-                # Corroborating signals: boost confidence
                 correlation_bonus = min(ml_conf * 0.15, 0.20)
                 final_confidence = min(base_confidence + correlation_bonus, 0.99)
                 evidence_list.append(
@@ -86,7 +142,6 @@ class ThreatCorrelator:
                     f"Rule Engine detection with {ml_conf*100:.1f}% confidence."
                 )
             else:
-                # Rule fired but ML differed: slight discount
                 final_confidence = max(base_confidence - 0.05, 0.55)
                 evidence_list.append(
                     f"[Correlation Signal] Rule Engine flagged {threat_type} while ML model ranked "
@@ -101,6 +156,9 @@ class ThreatCorrelator:
                     f"[ML Random Forest] Multi-class classifier identified {threat_type} "
                     f"pattern with {ml_conf*100:.1f}% statistical confidence."
                 )
+            elif intel_match:
+                threat_type = "Threat Intel Match"
+                final_confidence = 0.90
             elif is_anomaly:
                 threat_type = "Suspicious Zero-Day Anomaly"
                 final_confidence = max(anomaly_score * 0.85, 0.60)
@@ -114,6 +172,31 @@ class ThreatCorrelator:
         if threat_type == "Normal":
             return None
             
+        # Add Threat Intel Evidence if matched
+        threat_intel_dict = None
+        if intel_match:
+            threat_intel_dict = {
+                "indicator": intel_match.indicator,
+                "type": intel_match.indicator_type,
+                "source": intel_match.source,
+                "severity": intel_match.severity,
+                "description": intel_match.description
+            }
+            evidence_list.append(
+                f"[Local Threat Intelligence] Offline indicator '{intel_match.indicator}' matched "
+                f"feed '{intel_match.source}' ({intel_match.description})."
+            )
+            final_confidence = min(final_confidence + 0.10, 0.99)
+
+        # Add Baseline Deviation Evidence if significant
+        baseline_summary_str = None
+        if baseline_dev and baseline_dev.get("is_significant"):
+            baseline_summary_str = baseline_dev.get("summary")
+            evidence_list.append(
+                f"[Behavioral Baseline Anomaly] {baseline_summary_str}"
+            )
+            final_confidence = min(final_confidence + 0.05, 0.99)
+
         # Add contributing feature explanations from Explainable AI
         contributions = ml_result.get("contributing_features", [])
         if contributions:
@@ -124,7 +207,6 @@ class ThreatCorrelator:
             )
             
         # Compute Transparent Risk Score (0 - 100)
-        # Base risk from threat category severity
         threat_base_risk = {
             "DDoS": 85.0,
             "Data Exfiltration": 90.0,
@@ -132,19 +214,22 @@ class ThreatCorrelator:
             "Port Scan": 55.0,
             "DGA / DNS Tunneling": 70.0,
             "Suspicious Encrypted Traffic": 65.0,
+            "Suspicious Encrypted": 65.0,
+            "Threat Intel Match": 80.0,
             "Suspicious Zero-Day Anomaly": 60.0
         }.get(threat_type, 50.0)
         
-        # Factor in confidence and volumetric impact
         confidence_factor = final_confidence
         tot_bytes = float(flow.get("total_bytes", 0))
-        volume_factor = min(tot_bytes / 5_000_000, 1.0) * 10.0  # up to +10 points for massive flows
+        volume_factor = min(tot_bytes / 5_000_000, 1.0) * 10.0
+        intel_bonus = 15.0 if intel_match else 0.0
+        baseline_bonus = 8.0 if (baseline_dev and baseline_dev.get("is_significant")) else 0.0
         
-        raw_risk = (threat_base_risk * 0.70) + (confidence_factor * 20.0) + volume_factor
+        raw_risk = (threat_base_risk * 0.60) + (confidence_factor * 20.0) + volume_factor + intel_bonus + baseline_bonus
         risk_score = round(min(max(raw_risk, 10.0), 99.5), 1)
         
         # Map Risk Score to Standard Severity
-        if risk_score >= 82.0:
+        if risk_score >= 82.0 or (intel_match and intel_match.severity == "CRITICAL"):
             severity = "CRITICAL"
         elif risk_score >= 65.0:
             severity = "HIGH"
@@ -154,6 +239,13 @@ class ThreatCorrelator:
             severity = "LOW"
             
         alert_id = f"ALT-{int(time.time())}-{uuid.uuid4().hex[:6].upper()}"
+
+        # Resolve MITRE ATT&CK mapping
+        mitre_info = MITRE_MAPPINGS.get(threat_type, {
+            "technique_id": "T1205",
+            "technique_name": "Traffic Signaling",
+            "tactic": "Defense Evasion"
+        })
         
         return CorrelatedThreat(
             alert_id=alert_id,
@@ -176,8 +268,14 @@ class ThreatCorrelator:
             duration=float(flow.get("duration", 0.0)),
             total_bytes=int(flow.get("total_bytes", 0)),
             total_packets=int(flow.get("total_packets", 0)),
-            anomaly_score=anomaly_score
+            anomaly_score=anomaly_score,
+            mitre_technique_id=mitre_info["technique_id"],
+            mitre_technique_name=mitre_info["technique_name"],
+            mitre_tactic=mitre_info["tactic"],
+            baseline_deviation=baseline_summary_str,
+            threat_intel_match=threat_intel_dict
         )
 
 # Global singleton correlator
 threat_correlator = ThreatCorrelator()
+
