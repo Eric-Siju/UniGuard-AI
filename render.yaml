@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: uniguard-ai
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: HOST
+        value: 0.0.0.0
+      - key: PASSIVE_MODE
+        value: "true"
+      - key: READ_ONLY_MONITORING
+        value: "true"
+      - key: ALLOWED_ORIGINS
+        value: "https://uniguard-ai.vercel.app,http://localhost:5173,http://localhost:3000"

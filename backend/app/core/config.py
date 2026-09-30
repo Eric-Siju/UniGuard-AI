@@ -18,8 +18,21 @@ SAVED_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-DATABASE_PATH = BASE_DIR / "uniguard.db"
-DATABASE_URL = f"sqlite:///{DATABASE_PATH.as_posix()}"
+import os
+
+_env_db_path = os.environ.get("DATABASE_PATH")
+if _env_db_path:
+    DATABASE_PATH = Path(_env_db_path)
+else:
+    DATABASE_PATH = BASE_DIR / "uniguard.db"
+
+DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+_env_db_url = os.environ.get("DATABASE_URL")
+if _env_db_url:
+    DATABASE_URL = _env_db_url
+else:
+    DATABASE_URL = f"sqlite:///{DATABASE_PATH.as_posix()}"
 
 class Settings(BaseModel):
     APP_NAME: str = "UniGuard AI"
@@ -34,6 +47,14 @@ class Settings(BaseModel):
     ALLOW_PAYLOAD_DECRYPTION: bool = False
     
     DATABASE_URL: str = DATABASE_URL
+    ALLOWED_ORIGINS: list[str] = [
+        o.strip()
+        for o in os.environ.get(
+            "ALLOWED_ORIGINS",
+            "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
+        ).split(",")
+        if o.strip()
+    ]
     MAX_UPLOAD_SIZE_MB: int = 50
     ALLOWED_EXTENSIONS: list[str] = [".pcap", ".pcapng", ".cap", ".csv"]
     

@@ -37,10 +37,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for local clients
+# Enable CORS for production and development frontend clients
+cors_origins = list(settings.ALLOWED_ORIGINS)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
+    allow_origin_regex=r"https://.*(\.vercel\.app|\.onrender\.com)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -110,4 +113,7 @@ def catch_all_spa(full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend.app.main:app", host="127.0.0.1", port=8000, reload=True)
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", 8000))
+    reload = os.environ.get("ENV", "production").lower() == "development"
+    uvicorn.run("backend.app.main:app", host=host, port=port, reload=reload)

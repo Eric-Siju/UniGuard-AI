@@ -1,6 +1,7 @@
 import { SystemStats, Alert, FlowRecord, ThreatSummary, ModelMetadata, BenchmarkResult, WebSocketEvent } from "../types"
 
-const API_BASE = ""
+const rawEnvBase = import.meta.env.VITE_API_BASE_URL as string | undefined
+const API_BASE = rawEnvBase ? rawEnvBase.trim().replace(/\/+$/, "") : ""
 
 export async function fetchStats(): Promise<SystemStats> {
   const res = await fetch(`${API_BASE}/api/stats`)
@@ -267,10 +268,21 @@ export function createAlertsWebSocket(
   onMessage: (event: WebSocketEvent) => void,
   onStatusChange?: (connected: boolean) => void
 ) {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  const host = window.location.host
-  // If in dev proxy or direct port, fallback cleanly
-  const wsUrl = `${protocol}//${host}/ws/alerts`
+  let wsUrl: string
+  if (API_BASE && (API_BASE.startsWith("http://") || API_BASE.startsWith("https://"))) {
+    try {
+      const url = new URL(API_BASE)
+      const wsProto = url.protocol === "https:" ? "wss:" : "ws:"
+      wsUrl = `${wsProto}//${url.host}/ws/alerts`
+    } catch {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+      wsUrl = `${protocol}//${window.location.host}/ws/alerts`
+    }
+  } else {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+    const host = window.location.host
+    wsUrl = `${protocol}//${host}/ws/alerts`
+  }
   
   let ws: WebSocket | null = null
   let reconnectTimer: any = null
