@@ -16,4 +16,4 @@ services:
       - key: READ_ONLY_MONITORING
         value: "true"
       - key: ALLOWED_ORIGINS
-        value: "https://uniguard-ai.vercel.app,http://localhost:5173,http://localhost:3000"
+        value: "https://uniguard-ai-sih.vercel.app,https://uniguard-ai.vercel.app,http://localhost:5173,http://localhost:3000"
