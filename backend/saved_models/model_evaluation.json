@@ -1,0 +1,331 @@
+{
+  "model_name": "UniGuard-RF-Detector-v1",
+  "model_type": "RandomForestClassifier (100 trees) + IsolationForest",
+  "version": "1.0.0",
+  "training_timestamp": "2026-09-29T22:41:20.190597",
+  "dataset_name": "combined_demo.csv",
+  "sample_count": 1950,
+  "feature_count": 26,
+  "classes": [
+    "Botnet C2",
+    "DDoS",
+    "DGA / DNS Tunneling",
+    "Data Exfiltration",
+    "Normal",
+    "Port Scan",
+    "Suspicious Encrypted Traffic"
+  ],
+  "accuracy": 0.9983,
+  "precision": 0.9983,
+  "recall": 0.9983,
+  "f1_score": 0.9983,
+  "confusion_matrix": [
+    [
+      75,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      90,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      75,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      60,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      119,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      90,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      75
+    ]
+  ],
+  "classification_report": {
+    "Botnet C2": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 75.0
+    },
+    "DDoS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 90.0
+    },
+    "DGA / DNS Tunneling": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 75.0
+    },
+    "Data Exfiltration": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 60.0
+    },
+    "Normal": {
+      "precision": 1.0,
+      "recall": 0.9916666666666667,
+      "f1-score": 0.99581589958159,
+      "support": 120.0
+    },
+    "Port Scan": {
+      "precision": 0.989010989010989,
+      "recall": 1.0,
+      "f1-score": 0.994475138121547,
+      "support": 90.0
+    },
+    "Suspicious Encrypted Traffic": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 75.0
+    },
+    "accuracy": 0.9982905982905983,
+    "macro avg": {
+      "precision": 0.9984301412872841,
+      "recall": 0.9988095238095239,
+      "f1-score": 0.9986130053861624,
+      "support": 585.0
+    },
+    "weighted avg": {
+      "precision": 0.9983093829247677,
+      "recall": 0.9982905982905983,
+      "f1-score": 0.9982917442405642,
+      "support": 585.0
+    }
+  },
+  "false_positive_rate": 0.0083,
+  "false_negative_rate": 0.0,
+  "top_features": [
+    {
+      "feature": "total_packets",
+      "display_name": "Total Packet Count",
+      "importance": 0.1421
+    },
+    {
+      "feature": "total_bytes",
+      "display_name": "Total Bytes Transferred",
+      "importance": 0.1164
+    },
+    {
+      "feature": "outbound_bytes",
+      "display_name": "Outbound Volume (bytes)",
+      "importance": 0.1152
+    },
+    {
+      "feature": "avg_packet_size",
+      "display_name": "Mean Packet Size",
+      "importance": 0.1042
+    },
+    {
+      "feature": "packets_per_sec",
+      "display_name": "Packet Velocity (pkts/sec)",
+      "importance": 0.0679
+    },
+    {
+      "feature": "duration",
+      "display_name": "Flow Duration (sec)",
+      "importance": 0.067
+    },
+    {
+      "feature": "iat_max",
+      "display_name": "Maximum Packet Gap",
+      "importance": 0.0663
+    },
+    {
+      "feature": "syn_ratio",
+      "display_name": "SYN-to-Total-Flags Ratio",
+      "importance": 0.0571
+    },
+    {
+      "feature": "iat_mean",
+      "display_name": "Mean Inter-Arrival Time",
+      "importance": 0.0412
+    },
+    {
+      "feature": "dns_query_length",
+      "display_name": "DNS Query Length (chars)",
+      "importance": 0.0405
+    }
+  ],
+  "all_features": [
+    {
+      "feature": "total_packets",
+      "display_name": "Total Packet Count",
+      "importance": 0.1421
+    },
+    {
+      "feature": "total_bytes",
+      "display_name": "Total Bytes Transferred",
+      "importance": 0.1164
+    },
+    {
+      "feature": "outbound_bytes",
+      "display_name": "Outbound Volume (bytes)",
+      "importance": 0.1152
+    },
+    {
+      "feature": "avg_packet_size",
+      "display_name": "Mean Packet Size",
+      "importance": 0.1042
+    },
+    {
+      "feature": "packets_per_sec",
+      "display_name": "Packet Velocity (pkts/sec)",
+      "importance": 0.0679
+    },
+    {
+      "feature": "duration",
+      "display_name": "Flow Duration (sec)",
+      "importance": 0.067
+    },
+    {
+      "feature": "iat_max",
+      "display_name": "Maximum Packet Gap",
+      "importance": 0.0663
+    },
+    {
+      "feature": "syn_ratio",
+      "display_name": "SYN-to-Total-Flags Ratio",
+      "importance": 0.0571
+    },
+    {
+      "feature": "iat_mean",
+      "display_name": "Mean Inter-Arrival Time",
+      "importance": 0.0412
+    },
+    {
+      "feature": "dns_query_length",
+      "display_name": "DNS Query Length (chars)",
+      "importance": 0.0405
+    },
+    {
+      "feature": "dns_entropy",
+      "display_name": "DNS Domain Shannon Entropy",
+      "importance": 0.04
+    },
+    {
+      "feature": "bytes_per_sec",
+      "display_name": "Bandwidth Velocity (bytes/sec)",
+      "importance": 0.0367
+    },
+    {
+      "feature": "dns_digit_ratio",
+      "display_name": "DNS Query Numeric Ratio",
+      "importance": 0.0365
+    },
+    {
+      "feature": "dns_subdomain_depth",
+      "display_name": "DNS Subdomain Label Depth",
+      "importance": 0.0266
+    },
+    {
+      "feature": "ack_count",
+      "display_name": "TCP ACK Flag Count",
+      "importance": 0.0244
+    },
+    {
+      "feature": "syn_count",
+      "display_name": "TCP SYN Flag Count",
+      "importance": 0.0179
+    },
+    {
+      "feature": "packet_size_std",
+      "display_name": "Packet Size Variance",
+      "importance": 0.0
+    },
+    {
+      "feature": "iat_std",
+      "display_name": "Inter-Arrival Jitter (std dev)",
+      "importance": 0.0
+    },
+    {
+      "feature": "iat_min",
+      "display_name": "Minimum Packet Gap",
+      "importance": 0.0
+    },
+    {
+      "feature": "fan_in",
+      "display_name": "Destination Convergence (Fan-In)",
+      "importance": 0.0
+    },
+    {
+      "feature": "fan_out",
+      "display_name": "Host Dispersion (Fan-Out)",
+      "importance": 0.0
+    },
+    {
+      "feature": "unique_dst_ports",
+      "display_name": "Unique Destination Ports",
+      "importance": 0.0
+    },
+    {
+      "feature": "unique_src_ports",
+      "display_name": "Unique Source Ports",
+      "importance": 0.0
+    },
+    {
+      "feature": "conn_frequency",
+      "display_name": "Connection Frequency",
+      "importance": 0.0
+    },
+    {
+      "feature": "rst_count",
+      "display_name": "TCP RST Flag Count",
+      "importance": 0.0
+    },
+    {
+      "feature": "outbound_ratio",
+      "display_name": "Outbound-to-Inbound Ratio",
+      "importance": 0.0
+    }
+  ],
+  "is_active": true
+}

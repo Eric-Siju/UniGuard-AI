@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #050811;
+    color: #f1f5f9;
+  }
+}
+
+/* Custom sleek cyber scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b1120;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Subtle glowing pulse animations */
+@keyframes cyber-pulse {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.4)); }
+  50% { opacity: 0.8; filter: drop-shadow(0 0 2px rgba(6, 182, 212, 0.2)); }
+}
+
+.animate-cyber {
+  animation: cyber-pulse 2.5s infinite ease-in-out;
+}

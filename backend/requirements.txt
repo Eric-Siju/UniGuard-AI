@@ -1,0 +1,18 @@
+# UniGuard AI - Backend Python Dependencies
+# Python 3.11+ compatible (Tested on Python 3.14.0)
+
+fastapi==0.142.0
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+sqlalchemy==2.1.1
+scapy==2.7.0
+pandas==3.0.6
+numpy==2.5.3
+scikit-learn==1.9.1
+joblib==1.6.0
+psutil==7.2.2
+python-multipart==0.0.32
+websockets==17.1
+httpx==0.28.1
+pytest==9.1.1
+jinja2==3.1.6
