@@ -6,7 +6,9 @@ Strictly passive: relies only on unidirectional header observations and statisti
 
 import time
 from typing import Dict, Any, List, Optional
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
+import numpy as np
 from backend.app.core.config import settings
 
 @dataclass
@@ -140,47 +142,108 @@ class BotnetBeaconRule(BaseRule):
     rule_id: str = "RULE-BOTNET-03"
     threat_class: str = "Botnet C2"
 
+    def __init__(self):
+        # Sliding-window beacon history per (src_ip, dst_ip, dst_port) conversation
+        # Stores tuples: (timestamp, total_bytes, avg_packet_size, flow_id)
+        self.beacon_history = defaultdict(lambda: deque(maxlen=25))
+
+    def reset(self):
+        """Resets tracked beacon history for clean testing and state isolation."""
+        self.beacon_history.clear()
+
     def evaluate(self, flow: Dict[str, Any], features: Dict[str, float]) -> Optional[RuleMatch]:
+        src_ip = str(flow.get("src_ip", ""))
+        dst_ip = str(flow.get("dst_ip", ""))
+        try:
+            dst_port = int(flow.get("dst_port", 0))
+        except (ValueError, TypeError):
+            dst_port = 0
+            
+        try:
+            ts = float(flow.get("ts_epoch", time.time()))
+        except (ValueError, TypeError):
+            ts = time.time()
+            
+        tot_bytes = float(features.get("total_bytes", flow.get("total_bytes", 0)))
+        tot_pkts = float(features.get("total_packets", flow.get("total_packets", 1)))
+        avg_pkt = float(features.get("avg_packet_size", tot_bytes / max(tot_pkts, 1)))
+        flow_id = str(flow.get("flow_id", ""))
+
+        key = (src_ip, dst_ip, dst_port)
+        history = self.beacon_history[key]
+        history.append((ts, tot_bytes, avg_pkt, flow_id))
+
+        # CRITICAL BUG FIX (Phase 9):
+        # A single ordinary flow MUST NEVER trigger Botnet C2!
+        # Requires repeated behavioural evidence across at least settings.BOTNET_MIN_BEACONS observations.
+        min_beacons = getattr(settings, "BOTNET_MIN_BEACONS", 4)
+        if len(history) < min_beacons:
+            return None
+
+        # Extract timestamps and compute inter-arrival intervals
+        timestamps = [h[0] for h in history]
+        intervals = [timestamps[i] - timestamps[i-1] for i in range(1, len(timestamps))]
+        # Filter for valid positive inter-beacon intervals
+        positive_intervals = [dt for dt in intervals if dt > 0.05]
+
+        if len(positive_intervals) < (min_beacons - 1):
+            return None
+
+        mean_interval = float(np.mean(positive_intervals))
+        std_interval = float(np.std(positive_intervals))
+        cv = std_interval / max(mean_interval, 0.001)
+
+        # Payload size distribution across observed beacons
+        sizes = [h[2] for h in history]
+        avg_size = float(np.mean(sizes))
+        size_std = float(np.std(sizes))
+
         evidence = []
         signals = 0
-        
-        iat_std = features.get("iat_std", 1.0)
-        iat_mean = features.get("iat_mean", 0.0)
-        tot_bytes = features.get("total_bytes", 0.0)
-        tot_pkts = features.get("total_packets", 0.0)
-        avg_pkt = features.get("avg_packet_size", 0.0)
-        
-        # Signal 1: Highly periodic intervals (low jitter)
-        if 0.5 <= iat_mean <= 60.0 and iat_std <= settings.BOTNET_INTERVAL_JITTER_MAX and tot_pkts >= 3:
-            evidence.append(f"Strict periodic heartbeat: interval {iat_mean:.2f}s with minimal jitter (std dev {iat_std:.3f}s)")
-            signals += 1
-            
-        # Signal 2: Small, uniform telemetry beacon payload
-        if 40 <= avg_pkt <= 250 and tot_bytes < 5000:
-            evidence.append(f"Fixed-size heartbeat payload: {avg_pkt:.1f} bytes avg")
-            signals += 1
-            
-        # Signal 3: Repetitive communication pattern
-        if tot_pkts >= 3 and flow.get("dst_port") in [443, 8080, 8443, 4444, 9001]:
-            evidence.append(f"Persistent C2 control channel on port {flow.get('dst_port')}")
+
+        # Signal 1: Highly periodic interval with low timing jitter (heartbeat cadence)
+        max_jitter = getattr(settings, "BOTNET_INTERVAL_JITTER_MAX", 0.25)
+        if 0.5 <= mean_interval <= 120.0 and (std_interval <= max_jitter or cv <= 0.20):
+            evidence.append(
+                f"Strict periodic heartbeat: mean interval {mean_interval:.2f}s with minimal jitter "
+                f"(std dev {std_interval:.3f}s, CV {cv:.2f}) across {len(history)} beacons"
+            )
             signals += 1
 
-        if signals >= 2:
-            confidence = min(0.60 + (signals * 0.12), 0.95)
-            severity = "HIGH" if signals >= 3 else "MEDIUM"
+        # Signal 2: Small, uniform telemetry beacon payload across all observations
+        if 30 <= avg_size <= 350 and size_std <= 60.0:
+            evidence.append(
+                f"Uniform lightweight heartbeat payload: {avg_size:.1f} bytes avg "
+                f"(size std dev {size_std:.1f} bytes across {len(history)} observations)"
+            )
+            signals += 1
+
+        # Signal 3: Persistent command-and-control communication pattern
+        if dst_port in [443, 8080, 8443, 4444, 9001, 8000, 6667] or len(history) >= (min_beacons + 2):
+            evidence.append(
+                f"Persistent C2 control channel: {len(history)} repeated beacons to {dst_ip}:{dst_port} "
+                f"(min required: {min_beacons})"
+            )
+            signals += 1
+
+        # Require at least 2 corroborating signals AND minimum beacon count satisfied
+        if signals >= 2 and len(history) >= min_beacons:
+            confidence = min(0.68 + (signals * 0.08) + (min(len(history), 10) * 0.015), 0.98)
+            severity = "CRITICAL" if len(history) >= 8 or signals >= 3 else "HIGH"
             return RuleMatch(
                 rule_id=self.rule_id,
                 threat_class=self.threat_class,
                 severity=severity,
                 confidence=round(confidence, 2),
                 evidence=evidence,
-                flow_id=flow.get("flow_id", ""),
-                src_ip=flow.get("src_ip", ""),
-                dst_ip=flow.get("dst_ip", ""),
-                dst_port=int(flow.get("dst_port", 0)),
-                protocol=flow.get("protocol", "")
+                flow_id=flow_id,
+                src_ip=src_ip,
+                dst_ip=dst_ip,
+                dst_port=dst_port,
+                protocol=str(flow.get("protocol", "TCP"))
             )
         return None
+
 
 class DNSTunnelingRule(BaseRule):
     rule_id: str = "RULE-DNS-04"
@@ -347,3 +410,10 @@ class RuleEngine:
             if match:
                 matches.append(match)
         return matches
+
+    def reset(self):
+        """Resets all stateful rules in the engine."""
+        for rule in self.rules:
+            if hasattr(rule, "reset"):
+                rule.reset()
+

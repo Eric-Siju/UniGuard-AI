@@ -7,7 +7,7 @@ Printable to PDF natively via browser @media print CSS.
 """
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List
 from pathlib import Path
 from backend.app.core.config import REPORTS_DIR
@@ -19,7 +19,7 @@ def generate_html_report(
     benchmark_data: Dict[str, Any]
 ) -> str:
     """Generates a complete, beautiful HTML report."""
-    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     
     total_flows = summary_data.get("flows_processed", 0)
     total_threats = summary_data.get("threats_detected", len(alerts))
@@ -48,9 +48,9 @@ def generate_html_report(
             "LOW": "#3b82f6"
         }.get(a.get("severity", "LOW"), "#94a3b8")
         
-        evidence_text = "<br>? ".join(a.get("evidence", [])[:3])
+        evidence_text = "<br>&bull; ".join(a.get("evidence", [])[:3])
         if evidence_text:
-            evidence_text = "? " + evidence_text
+            evidence_text = "&bull; " + evidence_text
         else:
             evidence_text = "Standard statistical deviation"
             
@@ -228,7 +228,7 @@ def generate_html_report(
                 <div class="stat-val" style="color: #ef4444;">{total_threats:,}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Classifier Accuracy</div>
+                <div class="stat-label">Synthetic Benchmark Accuracy</div>
                 <div class="stat-val" style="color: #10b981;">{accuracy_val:.2f}%</div>
             </div>
             <div class="stat-card">
@@ -283,7 +283,7 @@ def generate_html_report(
                     <strong>Input Dimension:</strong> {model_metadata.get('feature_count', 26)} Unidirectional Features
                 </div>
                 <div>
-                    <strong>Verified Accuracy:</strong> {accuracy_val:.2f}%<br>
+                    <strong>Synthetic Benchmark Accuracy:</strong> {accuracy_val:.2f}% (measured local benchmark)<br>
                     <strong>F1-Score (Weighted):</strong> {f1_val:.4f}<br>
                     <strong>False Positive Rate:</strong> {fp_rate:.2f}%
                 </div>
@@ -297,7 +297,7 @@ def generate_html_report(
 
         <div class="section-title">4. Hardware Benchmark & Latency Measurements</div>
         <div class="box">
-            <p style="margin-top: 0;"><strong>Measured on development workstation:</strong> {benchmark_data.get('machine_info', {}).get('os', 'Windows 11')} ({benchmark_data.get('machine_info', {}).get('processor', 'x86_64')})</p>
+            <p style="margin-top: 0;"><strong>Measured on development machine:</strong> {benchmark_data.get('machine_info', {}).get('os', 'Windows 11')} ({benchmark_data.get('machine_info', {}).get('processor', 'x86_64')})</p>
             <ul>
                 <li><strong>Average Feature Extraction Latency:</strong> {benchmark_data.get('avg_feature_extraction_ms', 0.015)} ms / flow</li>
                 <li><strong>Average ML Inference Latency:</strong> {benchmark_data.get('avg_ml_inference_ms', 75.0)} ms / flow</li>

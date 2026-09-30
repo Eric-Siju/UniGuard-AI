@@ -1,4 +1,4 @@
-import { SystemStats, Alert, FlowRecord, ThreatSummary, ModelMetadata, BenchmarkResult } from "../types"
+import { SystemStats, Alert, FlowRecord, ThreatSummary, ModelMetadata, BenchmarkResult, WebSocketEvent } from "../types"
 
 const API_BASE = ""
 
@@ -117,7 +117,7 @@ export async function uploadDataset(file: File, type: "csv" | "pcap"): Promise<a
 
 // Real-time WebSocket connection hook helper
 export function createAlertsWebSocket(
-  onMessage: (event: { type: string; flow?: any; alert?: any; stats?: any }) => void,
+  onMessage: (event: WebSocketEvent) => void,
   onStatusChange?: (connected: boolean) => void
 ) {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"

@@ -55,76 +55,104 @@ UniGuard AI resolves unidirectional monitoring through a multi-tiered pipeline:
 
 ## 4. Technology Stack
 
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, Recharts.
-- **Backend:** Python 3.11+, FastAPI, Pydantic, SQLAlchemy, SQLite, Uvicorn, WebSockets.
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, Recharts (compiled into `frontend/dist/` and served directly by FastAPI).
+- **Backend:** Python 3.11+ (tested on Python 3.14 on Windows), FastAPI, Pydantic, SQLAlchemy, SQLite, Uvicorn, WebSockets.
 - **Network / ML:** Scapy (passive packet inspection), Pandas, NumPy, Scikit-learn (RandomForest, IsolationForest).
-- **Testing:** Pytest (11 comprehensive unit & integration tests).
+- **Testing:** Pytest (16 comprehensive unit & integration tests).
 
 ---
 
-## 5. Quick Start Instructions
+## 5. Quick Start Instructions (Windows PowerShell)
+
+UniGuard AI is designed to run **100% offline and locally**. The production setup delivers a **single official web application** where FastAPI serves the compiled React application directly on port 8000.
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.11+ (Python 3.14 compatible)
 - Node.js 18+ and npm
 
-### 1. Clone & Set Up Backend
-```bash
-# Clone the repository
-git clone https://github.com/erics/AI-Based-Detection-of-Cyber-Threats-in-Unidirectional-IP-Traffic.git
+### 1. Set Up Python Virtual Environment & Dependencies
+```powershell
+# Navigate to project root
 cd AI-Based-Detection-of-Cyber-Threats-in-Unidirectional-IP-Traffic
 
 # Create virtual environment
 python -m venv .venv
 
-# Activate virtual environment (Windows PowerShell)
+# Activate virtual environment
 .\.venv\Scripts\Activate.ps1
-# (Linux/macOS: source .venv/bin/activate)
 
-# Install Python dependencies
-pip install fastapi "uvicorn[standard]" pydantic sqlalchemy scapy pandas numpy scikit-learn python-multipart websockets pytest httpx psutil jinja2
-
-# Generate sample datasets and train initial model
-python -m backend.app.generator.traffic_generator
-python -c "from backend.app.engine.ml_detector import ml_detector; ml_detector.train()"
-
-# Start the Backend Server
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+# Install pinned Python dependencies
+pip install -r backend/requirements.txt
 ```
-*The Complete Web Application is live at `http://127.0.0.1:8000/` with interactive Swagger docs at `http://127.0.0.1:8000/docs`.*
 
-### 2. Set Up Frontend
-```bash
-# In a separate terminal:
+### 2. Build the Official Production Frontend
+```powershell
+# Navigate to frontend and install packages
 cd frontend
 npm install
-npm run dev
+
+# Compile the production React bundle into frontend/dist/
+npm run build
+cd ..
 ```
-*Frontend SOC Dashboard is live at `http://localhost:3000`.*
+
+### 3. Generate Sample Datasets & Train Models
+```powershell
+# Generate safe, local representative synthetic datasets in data/sample/
+python -m backend.app.generator.traffic_generator
+
+# Train Random Forest and Isolation Forest models with temporal context tracking
+python -c "from backend.app.engine.ml_detector import ml_detector; ml_detector.train()"
+```
+
+### 4. Launch the Official Production Server
+```powershell
+# Start FastAPI backend (serves API, WebSockets, and React SPA at port 8000)
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+Open **`http://127.0.0.1:8000`** in your browser.
+
+> [!NOTE]
+> During frontend development, you may optionally run `npm run dev` in `frontend/` on port 3000, but for production evaluation and the SIH judge demonstration, **`http://127.0.0.1:8000`** is the single official application.
 
 ---
 
 ## 6. How to Run the Automated Test Suite
 
-```bash
+```powershell
 # From workspace root:
-$env:PYTHONPATH="."
-.\.venv\Scripts\pytest.exe backend/tests/test_pipeline.py -v
+.\.venv\Scripts\pytest.exe -v
 ```
-All 11 tests will execute covering parsing, feature extraction, all 6 rules, ML inference, and REST endpoints.
+All **16 unit and integration tests** will execute covering:
+1. `test_health_endpoint`: Verifies passive read-only flags
+2. `test_shannon_entropy`: Validates domain entropy calculation
+3. `test_feature_extraction`: Validates 26-dimensional flow features
+4. `test_ddos_rule`: Validates volumetric DDoS detection
+5. `test_port_scan_rule`: Validates horizontal and vertical port scan rules
+6. `test_botnet_normal_https_does_not_trigger`: Proves normal HTTPS flows do NOT trigger false-positive Botnet alerts
+7. `test_botnet_synthetic_beacon_sequence_triggers`: Proves repeated periodic beacon sequences DO trigger Botnet C2 alerts
+8. `test_dns_tunneling_rule`: Validates high-entropy DNS tunnel detection
+9. `test_data_exfiltration_rule`: Validates volumetric outbound exfiltration detection
+10. `test_ml_inference_and_anomaly`: Tests Random Forest and Isolation Forest predictions
+11. `test_csv_parser`: Tests heterogeneous CSV flow parsing
+12. `test_api_endpoints`: Tests core REST endpoints
+13. `test_demo_scenario_whitelist`: Validates strict scenario whitelist rejection of arbitrary inputs
+14. `test_upload_security_validation`: Enforces 50MB limits, extensions, and traversal prevention
+15. `test_spa_root_and_fallback`: Verifies SPA routing for client-side navigation
+16. `test_pcap_parser_and_upload`: Validates Scapy PCAP parsing without external binary dependencies
 
 ---
 
 ## 7. Interactive Judge Demonstration Steps
 
-1. Open `http://127.0.0.1:8000` (or `http://localhost:3000`) in Google Chrome.
+1. Open **`http://127.0.0.1:8000`** in your browser.
 2. Confirm the visible status badges in the top header:
    `● PASSIVE MODE`, `● READ-ONLY MONITORING`, `● NO ACTIVE RESPONSE`, and `● LIVE WS`.
-3. In the control bar, select `Combined Attack Wave (Demo)` and click **START DEMO**.
-4. Watch live traffic flow into the dashboard with real-time velocity curves and threat alerts appearing in the feed.
-5. Click **Investigate ?** on any alert to inspect the 5-tuple endpoints, corroborating evidence, and Explainable AI feature attribution.
-6. Switch to **Traffic Analysis** to search flows or upload PCAP/CSV captures.
-7. Switch to **ML & Datasets** to view the confusion matrix and click **RETRAIN MODEL**.
+3. In the streaming control bar, select `Combined Attack Wave (Demo)` and click **START DEMO**.
+4. Watch live traffic flow into the dashboard with real-time velocity curves and threat alerts appearing in the feed without manual page refresh.
+5. Click **Investigate →** on any alert to inspect the 5-tuple endpoints, corroborating evidence, and Explainable AI feature attribution.
+6. Switch to **Traffic Analysis** to search flows, apply filters, or upload PCAP/CSV captures.
+7. Switch to **ML & Datasets** to view the confusion matrix, feature importance rankings, and click **RETRAIN MODEL**.
 8. Switch to **Benchmark** and click **RUN LIVE HARDWARE BENCHMARK** to measure real local latencies.
 9. Switch to **Security Reports** and click **Print / Export PDF** to generate an executive audit report.
 
@@ -132,16 +160,27 @@ All 11 tests will execute covering parsing, feature extraction, all 6 rules, ML 
 
 ## 8. Hardware Benchmark Measurements
 
-Empirical measurements gathered live on this development machine:
+*Measured on development machine (never fabricated or hardcoded):*
 - **Feature Extraction Latency:** `0.012 ms / flow`
 - **Multi-Signal Rule Latency:** `0.008 ms / flow`
 - **ML Inference Latency:** `74.4 ms / flow` (100-tree Random Forest + 100-tree Isolation Forest)
 - **Pipeline Throughput:** `13.4 flows / sec`
-- **Resident Memory Footprint:** `163.5 MB`
+- **Resident Memory Footprint:** `~163 MB`
 
 ---
 
-## 9. Documentation Index
+## 9. Troubleshooting
+
+- **PowerShell Execution Policy Error (`Activate.ps1 cannot be loaded`):**
+  Run: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` and re-run `.\.venv\Scripts\Activate.ps1`.
+- **Port 8000 in use:**
+  Check running processes with `Get-Process -Id (Get-NetTCPConnection -LocalPort 8000).OwningProcess` or launch on another port with `--port 8001`.
+- **Rebuilding frontend:**
+  Run `cd frontend; npm run build; cd ..` whenever frontend code is updated.
+
+---
+
+## 10. Documentation Index
 
 - [Architecture Design](docs/architecture.md)
 - [Machine Learning & XAI](docs/ML.md)

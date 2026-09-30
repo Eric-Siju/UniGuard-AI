@@ -49,7 +49,13 @@ app.add_middleware(
 # Mount REST API Router
 app.include_router(api_router)
 
-# Mount static files directory if present
+# Mount React production build assets as official frontend
+frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+frontend_assets = os.path.join(frontend_dist, "assets")
+if os.path.exists(frontend_assets):
+    app.mount("/assets", StaticFiles(directory=frontend_assets), name="assets")
+
+# Mount legacy static files directory if present (fallback)
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
@@ -72,9 +78,12 @@ async def websocket_alerts_endpoint(websocket: WebSocket):
 
 @app.get("/")
 def root():
-    index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
+    react_index = os.path.join(frontend_dist, "index.html")
+    if os.path.exists(react_index):
+        return FileResponse(react_index)
+    static_index = os.path.join(static_dir, "index.html")
+    if os.path.exists(static_index):
+        return FileResponse(static_index)
     return {
         "system": settings.APP_NAME,
         "version": settings.APP_VERSION,
@@ -85,6 +94,19 @@ def root():
         "docs_url": "/docs",
         "health_url": "/health"
     }
+
+@app.get("/{full_path:path}")
+def catch_all_spa(full_path: str):
+    """Serves the official React SPA index.html for client-side routing on page refresh."""
+    if full_path.startswith(("api", "ws", "health", "docs", "openapi.json", "assets", "static")):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Not Found")
+    react_index = os.path.join(frontend_dist, "index.html")
+    if os.path.exists(react_index):
+        return FileResponse(react_index)
+    from fastapi import HTTPException
+    raise HTTPException(status_code=404, detail="Not Found")
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -67,6 +67,8 @@ export interface SystemStats {
   passive_mode: boolean
   read_only_status: boolean
   active_response: boolean
+  current_fps?: number
+  avg_latency_ms?: number
 }
 
 export interface ThreatSummary {
@@ -120,3 +122,27 @@ export interface BenchmarkResult {
   alerts_generated: number
   status_label: string
 }
+
+export type WebSocketEvent =
+  | {
+      type: "init_status"
+      state: string
+      speed: number
+      scenario: string
+      stats: SystemStats
+    }
+  | {
+      type: "flow_event"
+      flow: FlowRecord
+      alert?: Alert | null
+    }
+  | {
+      type: "stats_update"
+      stats: Partial<SystemStats> & { current_fps?: number }
+    }
+  | {
+      type: "state_change" | "demo_state"
+      state: string
+      speed?: number
+      scenario?: string
+    }

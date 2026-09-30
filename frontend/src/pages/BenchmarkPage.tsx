@@ -48,11 +48,11 @@ export const BenchmarkPage: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
           <span>
-            <strong>INTEGRITY ASSURANCE:</strong> All metrics below reflect physical wall-clock performance measured on this development host. No mock or fabricated numbers.
+            <strong>INTEGRITY ASSURANCE:</strong> Measured on development machine. All metrics below reflect physical wall-clock performance measured on this development host. No mock or fabricated numbers.
           </span>
         </div>
-        <span className="text-[11px] px-2.5 py-1 rounded bg-slate-950 text-slate-300 border border-slate-800 shrink-0">
-          STATUS: VERIFIED
+        <span className="text-[11px] px-2.5 py-1 rounded bg-slate-950 text-cyan-300 border border-cyan-800 shrink-0 font-semibold">
+          MEASURED ON DEVELOPMENT MACHINE
         </span>
       </div>
 

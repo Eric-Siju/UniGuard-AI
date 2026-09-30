@@ -12,7 +12,7 @@ UniGuard AI is designed to run 100% locally and offline without external interne
 ## 1. Backend Setup
 
 ### Create and Activate Virtual Environment
-```bash
+```powershell
 # In project root:
 py -3.14 -m venv .venv
 
@@ -23,50 +23,50 @@ py -3.14 -m venv .venv
 source .venv/bin/activate
 ```
 
-### Install Python Dependencies
-```bash
-pip install fastapi "uvicorn[standard]" pydantic sqlalchemy scapy pandas numpy scikit-learn python-multipart websockets pytest httpx psutil jinja2
+### Install Pinned Python Dependencies
+```powershell
+pip install -r backend/requirements.txt
 ```
 
 ### Generate Sample Datasets & Train Initial Models
-```bash
+```powershell
 # Generate all 8 synthetic datasets in data/sample/
 python -m backend.app.generator.traffic_generator
 
-# Train Random Forest and Isolation Forest models
+# Train Random Forest and Isolation Forest models with temporal context tracking
 python -c "from backend.app.engine.ml_detector import ml_detector; ml_detector.train()"
 ```
 
-### Run Backend Server
-```bash
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-The backend API is now running at `http://127.0.0.1:8000`.
-
 ---
 
-## 2. Frontend Setup
+## 2. Frontend Setup (Official Production Build)
 
-### Install Node Dependencies
-```bash
+The official application serves the compiled React application directly from FastAPI at `http://127.0.0.1:8000`.
+
+```powershell
 cd frontend
 npm install
+npm run build
+cd ..
 ```
-
-### Run Frontend Dev Server
-```bash
-npm run dev
-```
-The frontend application is now running at `http://localhost:3000`.
 
 ---
 
-## 3. Running Automated Tests
+## 3. Launching the Application
+
+### Single Official Production Web Application
+```powershell
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+Open **`http://127.0.0.1:8000`** in your browser. Both the React UI, the REST API endpoints, and the real-time WebSocket are fully operational on this single port.
+
+---
+
+## 4. Running Automated Tests
 
 To run the complete test suite:
-```bash
+```powershell
 # From workspace root:
-$env:PYTHONPATH="."
-.\.venv\Scripts\pytest.exe backend/tests/test_pipeline.py -v
+.\.venv\Scripts\pytest.exe -v
 ```
-All 11 tests will execute covering parsing, feature extraction, all 6 rules, ML inference, and REST endpoints.
+All **16 unit and integration tests** will execute covering parsing, feature extraction, all 6 threat detection rules, botnet false-positive protection, ML inference, scenario whitelisting, file upload security, and SPA routing.

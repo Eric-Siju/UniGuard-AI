@@ -4,11 +4,12 @@ Passive Unidirectional Cyber Threat Detection Platform
 """
 
 import os
+import re
 import shutil
 import time
 from pathlib import Path
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Response
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -30,6 +31,52 @@ from backend.app.engine.report_generator import generate_html_report
 
 router = APIRouter()
 
+ALLOWED_SCENARIOS = {
+    "combined_demo",
+    "normal",
+    "ddos",
+    "botnet",
+    "dns_tunneling",
+    "encrypted_traffic",
+    "port_scan",
+    "exfiltration"
+}
+
+MAX_UPLOAD_BYTES = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+async def save_upload_safely(file: UploadFile, prefix: str) -> Path:
+    """Streams and validates an upload enforcing strict size limits and sanitized filenames."""
+    orig_name = Path(file.filename or "upload").name
+    # Strip any directory traversal components and characters outside safe charset
+    sanitized = re.sub(r"[^a-zA-Z0-9_.-]", "_", orig_name)
+    if not sanitized:
+        sanitized = "file"
+    safe_name = f"{prefix}_{int(time.time()*1000)}_{sanitized}"
+    dest_path = UPLOAD_DIR / safe_name
+
+    total_bytes = 0
+    try:
+        with open(dest_path, "wb") as buffer:
+            while chunk := await file.read(64 * 1024):
+                total_bytes += len(chunk)
+                if total_bytes > MAX_UPLOAD_BYTES:
+                    buffer.close()
+                    if dest_path.exists():
+                        dest_path.unlink()
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File exceeds maximum allowed upload size of {settings.MAX_UPLOAD_SIZE_MB} MB"
+                    )
+                buffer.write(chunk)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if dest_path.exists():
+            dest_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Failed to process file upload: {str(e)}")
+
+    return dest_path
+
 @router.get("/health")
 def health_check():
     """Confirms application health and passive monitoring guarantees."""
@@ -40,8 +87,9 @@ def health_check():
         "passive_mode": settings.PASSIVE_MODE,
         "read_only_monitoring": settings.READ_ONLY_MONITORING,
         "active_response_enabled": settings.ACTIVE_RESPONSE_ENABLED,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
+
 
 @router.get("/api/stats")
 def get_system_stats(db: Session = Depends(get_db)):
@@ -214,45 +262,42 @@ def train_model():
 
 @router.post("/api/upload/csv")
 async def upload_csv(file: UploadFile = File(...)):
-    """Uploads external CSV flow dataset with safe path and size validation."""
-    if not file.filename.endswith(".csv"):
+    """Uploads external CSV flow dataset with safe path, 50MB size limit, and schema validation."""
+    if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only .csv files are supported")
         
-    safe_name = f"upload_{int(time.time())}_{Path(file.filename).name}"
-    dest_path = UPLOAD_DIR / safe_name
+    dest_path = await save_upload_safely(file, prefix="csv")
     
-    with open(dest_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
     try:
         flows = parse_csv_file(str(dest_path))
+        if not flows:
+            raise ValueError("CSV contains no valid flow records or could not be parsed")
+            
         return {
             "status": "success",
-            "filename": file.filename,
+            "filename": Path(file.filename).name,
             "flows_parsed": len(flows),
             "sample_flows": flows[:5]
         }
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=f"Malformed CSV content: {str(ve)}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse CSV: {str(e)}")
 
 @router.post("/api/upload/pcap")
 async def upload_pcap(file: UploadFile = File(...)):
-    """Uploads PCAP packet capture for passive header and metadata extraction."""
+    """Uploads PCAP packet capture for passive header and metadata extraction (strictly passive, no payload decryption)."""
     allowed = [".pcap", ".pcapng", ".cap"]
-    if not any(file.filename.lower().endswith(ext) for ext in allowed):
-        raise HTTPException(status_code=400, detail=f"File must be one of {allowed}")
+    if not file.filename or not any(file.filename.lower().endswith(ext) for ext in allowed):
+        raise HTTPException(status_code=400, detail=f"File extension must be one of {allowed}")
         
-    safe_name = f"pcap_{int(time.time())}_{Path(file.filename).name}"
-    dest_path = UPLOAD_DIR / safe_name
+    dest_path = await save_upload_safely(file, prefix="pcap")
     
-    with open(dest_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
     try:
         flows = parse_pcap_file(str(dest_path), max_packets=5000)
         return {
             "status": "success",
-            "filename": file.filename,
+            "filename": Path(file.filename).name,
             "flows_aggregated": len(flows),
             "sample_flows": flows[:5]
         }
@@ -261,7 +306,7 @@ async def upload_pcap(file: UploadFile = File(...)):
 
 @router.post("/api/demo/start")
 async def start_demo_stream(req: Optional[StreamControlRequest] = None):
-    """Starts real-time demo streaming pipeline."""
+    """Starts real-time demo streaming pipeline with strict scenario whitelisting."""
     scenario = 'combined_demo'
     speed = 1.0
     if req:
@@ -269,6 +314,15 @@ async def start_demo_stream(req: Optional[StreamControlRequest] = None):
         speed = req.speed_factor if req.speed_factor is not None else (req.speed or 1.0)
     if scenario.endswith('.csv'):
         scenario = scenario[:-4]
+        
+    # Strict Whitelist Validation (Phase 22)
+    if scenario not in ALLOWED_SCENARIOS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid scenario '{scenario}'. Allowed scenarios: {sorted(list(ALLOWED_SCENARIOS))}"
+        )
+        
+    speed = max(0.1, min(float(speed), 20.0))
     stream_engine.start_demo(scenario=scenario, speed=speed)
     return {
         'status': 'started',
@@ -276,6 +330,7 @@ async def start_demo_stream(req: Optional[StreamControlRequest] = None):
         'scenario': stream_engine.current_scenario,
         'speed': stream_engine.speed
     }
+
 @router.post("/api/demo/pause")
 async def pause_demo_stream():
     """Pauses demo streaming pipeline."""

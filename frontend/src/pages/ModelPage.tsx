@@ -8,7 +8,8 @@ import {
   Sliders,
   Award,
   Layers,
-  BarChart2
+  BarChart2,
+  ShieldCheck
 } from "lucide-react"
 import {
   BarChart,
@@ -46,7 +47,7 @@ export const ModelPage: React.FC = () => {
     try {
       const res = await triggerTrainModel()
       setModel(res.metadata)
-      setTrainMessage(`Model retrained successfully! Accuracy: ${(res.metadata.accuracy * 100).toFixed(2)}%`)
+      setTrainMessage(`Model retrained successfully! Synthetic benchmark accuracy: ${(res.metadata.accuracy * 100).toFixed(2)}% on local dataset`)
     } catch (err: any) {
       setTrainMessage(`Training error: ${err.message}`)
     } finally {
@@ -92,6 +93,15 @@ export const ModelPage: React.FC = () => {
         </div>
       )}
 
+      {/* Evaluation Honesty & Benchmark Attribution Banner */}
+      <div className="p-3 bg-slate-900/90 border border-amber-500/30 rounded-xl text-xs flex items-center gap-3">
+        <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
+        <div className="text-slate-300">
+          <span className="font-semibold text-amber-300">Evaluation Honesty Notice: </span>
+          All ML performance metrics below represent a <span className="text-white font-medium">measured local benchmark on synthetic dataset</span> (<code>combined_demo.csv</code>, 30% holdout split with isolated temporal context tracking). Metrics are not claimed as unverified real-world production accuracy.
+        </div>
+      </div>
+
       {loading && !model && (
         <div className="text-center py-16 text-cyan-400 font-mono text-sm animate-pulse">
           Loading ML architecture parameters & evaluation metrics...
@@ -103,11 +113,11 @@ export const ModelPage: React.FC = () => {
           {/* Key Evaluation Metrics Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-lg backdrop-blur">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase">Test Accuracy</span>
+              <span className="text-[11px] font-semibold text-slate-400 uppercase">Synthetic Benchmark Accuracy</span>
               <div className="text-2xl font-extrabold text-emerald-400 mt-2 font-mono">
                 {(model.accuracy * 100).toFixed(2)}%
               </div>
-              <div className="text-[10px] text-slate-500 mt-1">Stratified 30% Holdout</div>
+              <div className="text-[10px] text-slate-500 mt-1">Measured Local Benchmark</div>
             </div>
 
             <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-lg backdrop-blur">

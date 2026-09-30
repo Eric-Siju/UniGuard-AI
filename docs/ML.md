@@ -48,17 +48,66 @@ UniGuard AI implements a hybrid detection pipeline combining supervised ensemble
   6. `Suspicious Encrypted Traffic`
   7. `Data Exfiltration`
 
-### Evaluation Performance (Measured on Test Holdout)
-- **Accuracy:** `99.83%`
+### Evaluation Performance (Measured Local Benchmark on Synthetic Dataset)
+
+> [!NOTE]
+> **Evaluation Honesty Notice:**
+> The metrics below reflect empirical holdout test results evaluated on our locally generated synthetic benchmark dataset (`data/sample/combined_demo.csv`). They must be represented as **"99.83% accuracy on synthetic benchmark dataset"**, never as unverified real-world detection accuracy.
+
+- **Accuracy:** `99.83%` (584/585 test flows correctly classified)
 - **F1-Score (Weighted):** `0.9983`
 - **Precision:** `99.83%`
 - **Recall:** `99.83%`
-- **False Positive Rate (Normal misclassified as Threat):** `< 0.2%`
-- **False Negative Rate (Threat misclassified as Normal):** `< 0.2%`
+- **False Positive Rate (Normal misclassified as Threat):** `0.83%` (1/120)
+- **False Negative Rate (Threat misclassified as Normal):** `0.00%` (0/465)
+
+### Top Discriminating Features (Gini Importance)
+The model balances volumetric, statistical, and contextual topological signals:
+1. `total_packets` (0.1009) — Total Packet Count
+2. `total_bytes` (0.0945) — Total Flow Volume
+3. `conn_frequency` (0.0874) — Contextual Connection Frequency
+4. `outbound_bytes` (0.0815) — Outbound Egress Volume
+5. `fan_in` (0.0677) — Destination Convergence Ratio
+6. `avg_packet_size` (0.0623) — Mean Payload Byte Size
+7. `unique_src_ports` (0.0561) — Ephemeral Source Port Dispersion
 
 ---
 
-## 3. Unsupervised Anomaly Detector: Isolation Forest
+## 3. Contextual Features & Data Leakage Prevention
+
+In unidirectional IP monitoring, individual packets do not carry bidirectional handshake state. To distinguish distributed attacks (DDoS, port scans) from normal high-volume traffic, UniGuard AI calculates 5 topological context features:
+- `fan_in`: Number of unique source IPs targeting the same destination IP
+- `fan_out`: Number of unique destination IPs targeted by the same source IP
+- `unique_dst_ports`: Number of unique destination ports targeted by the source IP
+- `unique_src_ports`: Number of unique source ports used by the source IP
+- `conn_frequency`: Connection request rate per second within a 60-second sliding window
+
+### Preventing Train/Test Contamination
+In previous prototypes, computing context features globally across the entire dataset before splitting leaked future test information into training samples. 
+
+UniGuard AI prevents data contamination through strict isolation:
+1. **Split-First Architecture:** The raw chronological flow records are partitioned into a 70% train split and 30% test holdout *before* any feature extraction.
+2. **Dedicated Temporal Trackers:** The training set is processed using a dedicated `NetworkContextTracker` instance that only observes training events.
+3. **Isolated Test Tracking:** A completely separate `NetworkContextTracker` is initialized for the test set, ensuring zero leakage of test timestamps, endpoints, or port statistics into the training pipeline.
+4. **State Reset:** Both trackers enforce a 60-second sliding window expiry, matching live runtime inference behavior.
+
+---
+
+## 4. Botnet C2 False-Positive Elimination
+
+Standard heuristic rules that inspect isolated single flows on port 443/8080 can produce severe false positives on normal HTTPS traffic (e.g., standard browser keep-alives or API calls).
+
+UniGuard AI resolves this via stateful, multi-observation tracking:
+- **Minimum Observation Threshold:** Enforces `BOTNET_MIN_BEACONS = 4`. A single flow never triggers a botnet alert.
+- **Inter-Arrival Jitter Verification:** Calculates the standard deviation and coefficient of variation (CV) of inter-beacon intervals:
+  $$\text{CV} = \frac{\sigma_{\text{IAT}}}{\mu_{\text{IAT}}}$$
+  Alerts require $\sigma \le 0.25\text{s}$ and $\text{CV} \le 0.20$ to confirm algorithmic, machine-generated beaconing.
+- **Payload Uniformity:** Verifies that packet byte lengths are consistent across heartbeats.
+- Automated tests (`test_botnet_normal_https_does_not_trigger` and `test_botnet_synthetic_beacon_sequence_triggers`) guarantee that ordinary HTTPS web browsing is never flagged as Botnet C2.
+
+---
+
+## 5. Unsupervised Anomaly Detector: Isolation Forest
 
 - **Algorithm:** `sklearn.ensemble.IsolationForest`
 - **Parameters:** `n_estimators=100`, `contamination=0.15`, `random_state=42`
@@ -69,7 +118,7 @@ UniGuard AI implements a hybrid detection pipeline combining supervised ensemble
 
 ---
 
-## 4. Explainable AI (XAI) Attribution
+## 6. Explainable AI (XAI) Attribution
 
 For every classification, UniGuard AI computes feature attribution weights:
 $$\text{Impact}_i = |z_i| \times \text{Importance}_i$$
@@ -81,6 +130,6 @@ The top 4 contributing features are returned with plain-text explanations, displ
 
 ---
 
-## 5. Dataset Disclaimers & Integrity
-- **Synthetic Demo Data:** The CSV datasets in `data/sample/` are generated locally to simulate authentic network threat behaviors without compromising real systems or transmitting malicious packets over public networks.
-- **Metrics Integrity:** Test accuracy and confusion matrix values are computed live by Scikit-Learn during training on holdout data and stored in `backend/saved_models/model_evaluation.json`.
+## 7. Dataset Disclaimers & Integrity
+- **Synthetic Benchmark Labeling:** The CSV datasets in `data/sample/` are generated locally to simulate authentic network threat behaviors without compromising real systems or transmitting malicious packets over public networks.
+- **Metrics Integrity:** Test accuracy and confusion matrix values are computed live by Scikit-Learn during training on holdout data and stored in `backend/saved_models/model_evaluation.json`. Never hardcoded or fabricated.

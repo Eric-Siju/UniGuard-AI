@@ -2,7 +2,7 @@
   "model_name": "UniGuard-RF-Detector-v1",
   "model_type": "RandomForestClassifier (100 trees) + IsolationForest",
   "version": "1.0.0",
-  "training_timestamp": "2026-09-29T22:41:20.190597",
+  "training_timestamp": "2026-09-30T15:34:11.057599+00:00",
   "dataset_name": "combined_demo.csv",
   "sample_count": 1950,
   "feature_count": 26,
@@ -147,134 +147,159 @@
     {
       "feature": "total_packets",
       "display_name": "Total Packet Count",
-      "importance": 0.1421
+      "importance": 0.1009
     },
     {
       "feature": "total_bytes",
       "display_name": "Total Bytes Transferred",
-      "importance": 0.1164
+      "importance": 0.0945
+    },
+    {
+      "feature": "conn_frequency",
+      "display_name": "Connection Frequency",
+      "importance": 0.0874
     },
     {
       "feature": "outbound_bytes",
       "display_name": "Outbound Volume (bytes)",
-      "importance": 0.1152
+      "importance": 0.0815
+    },
+    {
+      "feature": "fan_in",
+      "display_name": "Destination Convergence (Fan-In)",
+      "importance": 0.0677
     },
     {
       "feature": "avg_packet_size",
       "display_name": "Mean Packet Size",
-      "importance": 0.1042
+      "importance": 0.0623
     },
     {
-      "feature": "packets_per_sec",
-      "display_name": "Packet Velocity (pkts/sec)",
-      "importance": 0.0679
+      "feature": "unique_src_ports",
+      "display_name": "Unique Source Ports",
+      "importance": 0.0561
     },
     {
       "feature": "duration",
       "display_name": "Flow Duration (sec)",
-      "importance": 0.067
+      "importance": 0.053
     },
     {
       "feature": "iat_max",
       "display_name": "Maximum Packet Gap",
-      "importance": 0.0663
+      "importance": 0.0528
     },
     {
-      "feature": "syn_ratio",
-      "display_name": "SYN-to-Total-Flags Ratio",
-      "importance": 0.0571
-    },
-    {
-      "feature": "iat_mean",
-      "display_name": "Mean Inter-Arrival Time",
-      "importance": 0.0412
-    },
-    {
-      "feature": "dns_query_length",
-      "display_name": "DNS Query Length (chars)",
-      "importance": 0.0405
+      "feature": "dns_digit_ratio",
+      "display_name": "DNS Query Numeric Ratio",
+      "importance": 0.0435
     }
   ],
   "all_features": [
     {
       "feature": "total_packets",
       "display_name": "Total Packet Count",
-      "importance": 0.1421
+      "importance": 0.1009
     },
     {
       "feature": "total_bytes",
       "display_name": "Total Bytes Transferred",
-      "importance": 0.1164
+      "importance": 0.0945
+    },
+    {
+      "feature": "conn_frequency",
+      "display_name": "Connection Frequency",
+      "importance": 0.0874
     },
     {
       "feature": "outbound_bytes",
       "display_name": "Outbound Volume (bytes)",
-      "importance": 0.1152
+      "importance": 0.0815
+    },
+    {
+      "feature": "fan_in",
+      "display_name": "Destination Convergence (Fan-In)",
+      "importance": 0.0677
     },
     {
       "feature": "avg_packet_size",
       "display_name": "Mean Packet Size",
-      "importance": 0.1042
+      "importance": 0.0623
     },
     {
-      "feature": "packets_per_sec",
-      "display_name": "Packet Velocity (pkts/sec)",
-      "importance": 0.0679
+      "feature": "unique_src_ports",
+      "display_name": "Unique Source Ports",
+      "importance": 0.0561
     },
     {
       "feature": "duration",
       "display_name": "Flow Duration (sec)",
-      "importance": 0.067
+      "importance": 0.053
     },
     {
       "feature": "iat_max",
       "display_name": "Maximum Packet Gap",
-      "importance": 0.0663
-    },
-    {
-      "feature": "syn_ratio",
-      "display_name": "SYN-to-Total-Flags Ratio",
-      "importance": 0.0571
-    },
-    {
-      "feature": "iat_mean",
-      "display_name": "Mean Inter-Arrival Time",
-      "importance": 0.0412
-    },
-    {
-      "feature": "dns_query_length",
-      "display_name": "DNS Query Length (chars)",
-      "importance": 0.0405
-    },
-    {
-      "feature": "dns_entropy",
-      "display_name": "DNS Domain Shannon Entropy",
-      "importance": 0.04
-    },
-    {
-      "feature": "bytes_per_sec",
-      "display_name": "Bandwidth Velocity (bytes/sec)",
-      "importance": 0.0367
+      "importance": 0.0528
     },
     {
       "feature": "dns_digit_ratio",
       "display_name": "DNS Query Numeric Ratio",
-      "importance": 0.0365
+      "importance": 0.0435
     },
     {
-      "feature": "dns_subdomain_depth",
-      "display_name": "DNS Subdomain Label Depth",
+      "feature": "packets_per_sec",
+      "display_name": "Packet Velocity (pkts/sec)",
+      "importance": 0.0399
+    },
+    {
+      "feature": "bytes_per_sec",
+      "display_name": "Bandwidth Velocity (bytes/sec)",
+      "importance": 0.0395
+    },
+    {
+      "feature": "iat_mean",
+      "display_name": "Mean Inter-Arrival Time",
+      "importance": 0.0382
+    },
+    {
+      "feature": "dns_query_length",
+      "display_name": "DNS Query Length (chars)",
+      "importance": 0.0343
+    },
+    {
+      "feature": "dns_entropy",
+      "display_name": "DNS Domain Shannon Entropy",
+      "importance": 0.0309
+    },
+    {
+      "feature": "unique_dst_ports",
+      "display_name": "Unique Destination Ports",
+      "importance": 0.0284
+    },
+    {
+      "feature": "fan_out",
+      "display_name": "Host Dispersion (Fan-Out)",
       "importance": 0.0266
     },
     {
-      "feature": "ack_count",
-      "display_name": "TCP ACK Flag Count",
-      "importance": 0.0244
+      "feature": "syn_ratio",
+      "display_name": "SYN-to-Total-Flags Ratio",
+      "importance": 0.0245
     },
     {
       "feature": "syn_count",
       "display_name": "TCP SYN Flag Count",
-      "importance": 0.0179
+      "importance": 0.014
+    },
+    {
+      "feature": "ack_count",
+      "display_name": "TCP ACK Flag Count",
+      "importance": 0.0126
+    },
+    {
+      "feature": "dns_subdomain_depth",
+      "display_name": "DNS Subdomain Label Depth",
+      "importance": 0.0115
     },
     {
       "feature": "packet_size_std",
@@ -292,31 +317,6 @@
       "importance": 0.0
     },
     {
-      "feature": "fan_in",
-      "display_name": "Destination Convergence (Fan-In)",
-      "importance": 0.0
-    },
-    {
-      "feature": "fan_out",
-      "display_name": "Host Dispersion (Fan-Out)",
-      "importance": 0.0
-    },
-    {
-      "feature": "unique_dst_ports",
-      "display_name": "Unique Destination Ports",
-      "importance": 0.0
-    },
-    {
-      "feature": "unique_src_ports",
-      "display_name": "Unique Source Ports",
-      "importance": 0.0
-    },
-    {
-      "feature": "conn_frequency",
-      "display_name": "Connection Frequency",
-      "importance": 0.0
-    },
-    {
       "feature": "rst_count",
       "display_name": "TCP RST Flag Count",
       "importance": 0.0
@@ -327,5 +327,7 @@
       "importance": 0.0
     }
   ],
-  "is_active": true
+  "is_active": true,
+  "evaluation_type": "synthetic benchmark dataset",
+  "benchmark_note": "99.83% accuracy on synthetic benchmark dataset (measured local benchmark)"
 }

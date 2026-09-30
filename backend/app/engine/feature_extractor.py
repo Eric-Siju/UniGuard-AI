@@ -31,26 +31,50 @@ class NetworkContextTracker:
     """
     def __init__(self, window_size: int = 1000):
         self.window_size = window_size
-        self.src_to_dsts = defaultdict(set)
-        self.src_to_ports = defaultdict(set)
-        self.dst_to_srcs = defaultdict(set)
-        self.dst_to_ports = defaultdict(set)
-        self.src_history = defaultdict(lambda: deque(maxlen=50))
         self.history = deque(maxlen=window_size)
+        self.src_to_dsts = defaultdict(lambda: defaultdict(int))
+        self.src_to_ports = defaultdict(lambda: defaultdict(int))
+        self.dst_to_srcs = defaultdict(lambda: defaultdict(int))
+        self.dst_to_ports = defaultdict(lambda: defaultdict(int))
+        self.src_history = defaultdict(lambda: deque(maxlen=50))
     
+    def reset(self):
+        """Resets all sliding-window tracking state."""
+        self.history.clear()
+        self.src_to_dsts.clear()
+        self.src_to_ports.clear()
+        self.dst_to_srcs.clear()
+        self.dst_to_ports.clear()
+        self.src_history.clear()
+
     def update(self, src_ip: str, dst_ip: str, dst_port: int, timestamp: float):
+        if len(self.history) == self.window_size:
+            old_src, old_dst, old_port, _ = self.history[0]
+            self.src_to_dsts[old_src][old_dst] -= 1
+            if self.src_to_dsts[old_src][old_dst] <= 0:
+                del self.src_to_dsts[old_src][old_dst]
+            self.src_to_ports[old_src][old_port] -= 1
+            if self.src_to_ports[old_src][old_port] <= 0:
+                del self.src_to_ports[old_src][old_port]
+            self.dst_to_srcs[old_dst][old_src] -= 1
+            if self.dst_to_srcs[old_dst][old_src] <= 0:
+                del self.dst_to_srcs[old_dst][old_src]
+            self.dst_to_ports[old_dst][old_port] -= 1
+            if self.dst_to_ports[old_dst][old_port] <= 0:
+                del self.dst_to_ports[old_dst][old_port]
+
         self.history.append((src_ip, dst_ip, dst_port, timestamp))
-        self.src_to_dsts[src_ip].add(dst_ip)
-        self.src_to_ports[src_ip].add(dst_port)
-        self.dst_to_srcs[dst_ip].add(src_ip)
-        self.dst_to_ports[dst_ip].add(dst_port)
+        self.src_to_dsts[src_ip][dst_ip] += 1
+        self.src_to_ports[src_ip][dst_port] += 1
+        self.dst_to_srcs[dst_ip][src_ip] += 1
+        self.dst_to_ports[dst_ip][dst_port] += 1
         self.src_history[src_ip].append(timestamp)
     
     def get_context(self, src_ip: str, dst_ip: str) -> Dict[str, Any]:
-        fan_out = len(self.src_to_dsts.get(src_ip, set()))
-        unique_dst_ports = len(self.src_to_ports.get(src_ip, set()))
-        fan_in = len(self.dst_to_srcs.get(dst_ip, set()))
-        unique_src_ports = len(self.dst_to_ports.get(dst_ip, set()))
+        fan_out = len(self.src_to_dsts.get(src_ip, {}))
+        unique_dst_ports = len(self.src_to_ports.get(src_ip, {}))
+        fan_in = len(self.dst_to_srcs.get(dst_ip, {}))
+        unique_src_ports = len(self.dst_to_ports.get(dst_ip, {}))
         
         src_times = list(self.src_history.get(src_ip, []))
         if len(src_times) >= 2:
@@ -64,7 +88,7 @@ class NetworkContextTracker:
             "unique_dst_ports": max(unique_dst_ports, 1),
             "fan_in": max(fan_in, 1),
             "unique_src_ports": max(unique_src_ports, 1),
-            "conn_frequency": conn_frequency,
+            "conn_frequency": min(conn_frequency, 500.0),
             "src_diversity": max(fan_in, 1),
             "dst_diversity": max(fan_out, 1)
         }
@@ -100,7 +124,11 @@ FEATURE_COLUMNS = [
     "outbound_ratio"
 ]
 
-def extract_flow_features(flow: Dict[str, Any], update_context: bool = True) -> Dict[str, float]:
+def extract_flow_features(
+    flow: Dict[str, Any],
+    update_context: bool = True,
+    tracker: Optional[NetworkContextTracker] = None
+) -> Dict[str, float]:
     """
     Extracts numerical feature vector from a raw or aggregated flow dict.
     Returns dictionary with all canonical FEATURE_COLUMNS.
@@ -116,9 +144,10 @@ def extract_flow_features(flow: Dict[str, Any], update_context: bool = True) -> 
     except (ValueError, TypeError):
         current_ts = time.time()
     
+    active_tracker = tracker if tracker is not None else network_context
     if update_context:
-        network_context.update(src_ip, dst_ip, dst_port, current_ts)
-        ctx = network_context.get_context(src_ip, dst_ip)
+        active_tracker.update(src_ip, dst_ip, dst_port, current_ts)
+        ctx = active_tracker.get_context(src_ip, dst_ip)
     else:
         ctx = {
             "fan_out": float(flow.get("fan_out", 1)),

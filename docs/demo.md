@@ -5,14 +5,14 @@ Follow this step-by-step walkthrough to demonstrate the full capabilities of Uni
 ---
 
 ## 1. Launch Verification (SOC Overview)
-1. Open Google Chrome to `http://localhost:3000`.
+1. Open Google Chrome to **`http://127.0.0.1:8000`** (the single official production application).
 2. Observe the top header:
    - **UniGuard AI** Branding & Problem Statement SIH26145 badge.
    - Three bold compliance badges:
-     - `? PASSIVE MODE`
-     - `? READ-ONLY MONITORING`
-     - `? NO ACTIVE RESPONSE`
-   - WebSocket Connection Pill shows `? LIVE WS` in bright green.
+     - `● PASSIVE MODE`
+     - `● READ-ONLY MONITORING`
+     - `● NO ACTIVE RESPONSE`
+   - WebSocket Connection Pill shows `● LIVE WS` in bright green.
 
 ---
 

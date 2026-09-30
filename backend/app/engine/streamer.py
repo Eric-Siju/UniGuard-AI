@@ -10,7 +10,7 @@ import json
 import time
 import pandas as pd
 from typing import Dict, Any, List, Set, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from starlette.websockets import WebSocket
 
 from backend.app.core.config import DATA_DIR, settings
@@ -73,6 +73,21 @@ class StreamingEngine:
         for ws in dead:
             self.active_connections.discard(ws)
 
+    def _broadcast_state_sync(self):
+        """Immediately broadcasts current demo state, speed, and scenario to all connected clients."""
+        try:
+            loop = asyncio.get_running_loop()
+            msg = {
+                "type": "init_status",
+                "state": self.state,
+                "speed": self.speed,
+                "scenario": self.current_scenario,
+                "stats": self.stats
+            }
+            loop.create_task(self.broadcast(msg))
+        except RuntimeError:
+            pass
+
     def start_demo(self, scenario: str = "combined_demo", speed: float = 1.0):
         if self.state == "RUNNING":
             self.stop_demo()
@@ -81,6 +96,10 @@ class StreamingEngine:
         self.speed = max(0.1, min(speed, 20.0))
         self.current_scenario = scenario
         self.start_time = time.time()
+        
+        # Reset rule stateful trackers (e.g. Botnet beacon counts) for clean scenario demonstration
+        self.rule_engine.reset()
+        self._broadcast_state_sync()
         
         # Spawn async streaming worker in the running event loop
         try:
@@ -97,11 +116,13 @@ class StreamingEngine:
     def pause_demo(self):
         if self.state == "RUNNING":
             self.state = "PAUSED"
+            self._broadcast_state_sync()
             print("[||] Demo stream paused.")
 
     def resume_demo(self):
         if self.state == "PAUSED":
             self.state = "RUNNING"
+            self._broadcast_state_sync()
             print("[>] Demo stream resumed.")
 
     def stop_demo(self):
@@ -109,10 +130,12 @@ class StreamingEngine:
         if self.worker_task and not self.worker_task.done():
             self.worker_task.cancel()
         self.worker_task = None
+        self._broadcast_state_sync()
         print("[x] Demo stream stopped.")
 
     def set_speed(self, speed: float):
         self.speed = max(0.1, min(speed, 20.0))
+        self._broadcast_state_sync()
         print(f"[*] Stream speed set to {self.speed}x")
 
     async def _run_stream_worker(self):

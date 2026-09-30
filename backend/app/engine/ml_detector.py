@@ -9,7 +9,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, List, Tuple, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
@@ -21,7 +21,7 @@ from sklearn.metrics import (
 )
 
 from backend.app.core.config import SAVED_MODELS_DIR, DATA_DIR
-from backend.app.engine.feature_extractor import FEATURE_COLUMNS, extract_flow_features
+from backend.app.engine.feature_extractor import FEATURE_COLUMNS, extract_flow_features, NetworkContextTracker
 
 MODEL_FILE = SAVED_MODELS_DIR / "rf_detector.joblib"
 ISOLATION_FILE = SAVED_MODELS_DIR / "isolation_forest.joblib"
@@ -107,27 +107,45 @@ class MLThreatDetector:
         print(f"[*] Training ML model with dataset: {dataset_path}")
         df = pd.read_csv(dataset_path)
         
-        # Build feature rows
-        feature_rows = []
-        labels = []
-        for _, row in df.iterrows():
+        # 1. Stratified split into Train and Test partitions BEFORE feature extraction to prevent data leakage
+        train_df, test_df = train_test_split(
+            df, test_size=0.30, random_state=42, stratify=df["threat_label"]
+        )
+        
+        # Re-sort partitions in chronological order so sliding-window observations occur in realistic temporal sequence
+        if "ts_epoch" in train_df.columns:
+            train_df = train_df.sort_values("ts_epoch").reset_index(drop=True)
+            test_df = test_df.sort_values("ts_epoch").reset_index(drop=True)
+
+        # 2. Extract Training Features using an isolated training context tracker
+        train_tracker = NetworkContextTracker(window_size=1000)
+        train_tracker.reset()
+        X_train_rows = []
+        y_train_labels = []
+        for _, row in train_df.iterrows():
             flow_dict = row.to_dict()
-            feats = extract_flow_features(flow_dict, update_context=False)
-            feature_rows.append([feats[col] for col in FEATURE_COLUMNS])
-            labels.append(str(flow_dict.get("threat_label", "Normal")))
-            
-        X = np.array(feature_rows, dtype=np.float32)
-        # Handle any possible NaNs or infs cleanly
-        X = np.nan_to_num(X, nan=0.0, posinf=1e6, neginf=-1e6)
+            feats = extract_flow_features(flow_dict, update_context=True, tracker=train_tracker)
+            X_train_rows.append([feats[col] for col in FEATURE_COLUMNS])
+            y_train_labels.append(str(flow_dict.get("threat_label", "Normal")))
+
+        # 3. Extract Test Features using an isolated test context tracker (Zero leakage from test to train)
+        test_tracker = NetworkContextTracker(window_size=1000)
+        test_tracker.reset()
+        X_test_rows = []
+        y_test_labels = []
+        for _, row in test_df.iterrows():
+            flow_dict = row.to_dict()
+            feats = extract_flow_features(flow_dict, update_context=True, tracker=test_tracker)
+            X_test_rows.append([feats[col] for col in FEATURE_COLUMNS])
+            y_test_labels.append(str(flow_dict.get("threat_label", "Normal")))
+
+        X_train = np.nan_to_num(np.array(X_train_rows, dtype=np.float32), nan=0.0, posinf=1e6, neginf=-1e6)
+        X_test = np.nan_to_num(np.array(X_test_rows, dtype=np.float32), nan=0.0, posinf=1e6, neginf=-1e6)
         
         self.label_encoder = LabelEncoder()
-        y = self.label_encoder.fit_transform(labels)
+        y_train = self.label_encoder.fit_transform(y_train_labels)
+        y_test = self.label_encoder.transform(y_test_labels)
         classes = list(self.label_encoder.classes_)
-        
-        # Split 70% Train, 30% Test (stratified)
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.30, random_state=42, stratify=y
-        )
         
         # Fit scaler on training set
         self.scaler = StandardScaler()
@@ -137,7 +155,7 @@ class MLThreatDetector:
         # Train Supervised Random Forest Classifier
         self.rf_model = RandomForestClassifier(
             n_estimators=100,
-            max_depth=12,
+            max_depth=14,
             min_samples_split=4,
             random_state=42,
             n_jobs=-1
@@ -190,9 +208,9 @@ class MLThreatDetector:
             "model_name": "UniGuard-RF-Detector-v1",
             "model_type": "RandomForestClassifier (100 trees) + IsolationForest",
             "version": "1.0.0",
-            "training_timestamp": datetime.utcnow().isoformat(),
+            "training_timestamp": datetime.now(timezone.utc).isoformat(),
             "dataset_name": Path(dataset_path).name,
-            "sample_count": int(len(X)),
+            "sample_count": int(len(train_df) + len(test_df)),
             "feature_count": len(FEATURE_COLUMNS),
             "classes": classes,
             "accuracy": round(acc, 4),
@@ -205,7 +223,9 @@ class MLThreatDetector:
             "false_negative_rate": round(fn_rate, 4),
             "top_features": feature_rankings[:10],
             "all_features": feature_rankings,
-            "is_active": True
+            "is_active": True,
+            "evaluation_type": "synthetic benchmark dataset",
+            "benchmark_note": f"{round(acc * 100, 2)}% accuracy on synthetic benchmark dataset (measured local benchmark)"
         }
         
         # Save checkpoints
@@ -220,7 +240,7 @@ class MLThreatDetector:
         
         self.evaluation_metadata = metadata
         self.is_loaded = True
-        print(f"[?] Model trained successfully! Accuracy: {acc*100:.2f}%, F1: {f1:.4f}")
+        print(f"[?] Model trained successfully! Synthetic benchmark accuracy: {acc*100:.2f}%, F1: {f1:.4f}")
         return metadata
 
     def predict(self, features: Dict[str, float]) -> Dict[str, Any]:
