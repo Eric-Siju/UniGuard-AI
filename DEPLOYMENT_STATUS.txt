@@ -1,160 +1,46 @@
 ================================================================================
 UNIGUARD AI (SIH26145) - COMPLETE DEPLOYMENT STATUS REPORT
 ================================================================================
-Date & Time: 2026-10-01T00:15:00+05:30
+Date & Time: 2026-10-01T01:50:00+05:30
 Project: UniGuard AI - Passive Unidirectional Cyber Threat Detection Platform
 Hackathon: Smart India Hackathon 2026 (Problem Statement SIH26145)
 GitHub Repository: https://github.com/Eric-Siju/UniGuard-AI
-Latest Commit: dfbf92f (Configure complete cloud deployment for Vercel, Render, and Docker)
 
 --------------------------------------------------------------------------------
-1. DEPLOYMENT ARCHITECTURE
+1. VERIFIED PUBLIC DEPLOYMENT URLS
 --------------------------------------------------------------------------------
-UniGuard AI supports two proven cloud production architectures:
+Public Frontend URL: https://uniguard-ai-sih.vercel.app
+Live Backend URL:    https://uniguard-ai-ntw4.onrender.com
+Live Health URL:     https://uniguard-ai-ntw4.onrender.com/health
+Live WebSocket URL:  wss://uniguard-ai-ntw4.onrender.com/ws/alerts
 
-[Architecture A: Unified Full-Stack Cloud Service (Render / Railway / Docker)]
-- Service: Render Web Service (or Docker Container on Fly.io/Cloud Run)
-- Mechanism: FastAPI backend binds to 0.0.0.0:$PORT, serves the pre-compiled
-  React Single Page Application from frontend/dist/ at root '/', handles all
-  client-side SPA routing via catch-all, serves REST APIs at /api/*, and serves
-  the real-time alert feed at /ws/alerts (wss:// in HTTPS).
-- Advantage: Zero cross-origin latency, no CORS synchronization issues, single
-  unified HTTPS link for evaluators, zero configuration required.
-
-[Architecture B: Decoupled Multi-Cloud Architecture (Vercel + Render)]
-- Frontend Service: Vercel (React 18 + Vite + Tailwind CSS)
-  - Root: frontend/ or repository root
-  - Rewrites: /(.*) -> /index.html
-  - Environment Variable: VITE_API_BASE_URL=https://<render-backend>.onrender.com
-- Backend Service: Render Web Service (FastAPI + Uvicorn)
-  - Runtime: Python 3.11+
-  - Build Command: pip install -r backend/requirements.txt
-  - Start Command: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
-  - Environment Variable: ALLOWED_ORIGINS=https://<vercel-app>.vercel.app
-- WebSocket: Frontend automatically derives wss://<render-backend>.onrender.com/ws/alerts
+Status: FULLY OPERATIONAL & CONNECTED END-TO-END
 
 --------------------------------------------------------------------------------
-2. SERVICES & CONFIGURATION FILES PREPARED
+2. LIVE END-TO-END TEST MATRIX (VERIFIED VIA AUTOMATED PIPELINE)
 --------------------------------------------------------------------------------
-- render.yaml:
-  Declarative Render Blueprint specifying Python web service, build/start commands,
-  port binding, passive security guarantees, and environment variables.
-- vercel.json (root and frontend/vercel.json):
-  Vercel configuration handling client-side routing rewrites and build commands.
-- Dockerfile & .dockerignore:
-  Multi-stage production build (Node 20 Vite build -> Python 3.11-slim FastAPI server).
-- .env.example & frontend/.env.example:
-  Template environment variables for backend and frontend.
-- frontend/src/services/api.ts:
-  Dynamic endpoint resolution via VITE_API_BASE_URL and protocol-aware ws:// / wss://.
-- backend/app/main.py & backend/app/core/config.py:
-  Configurable HOST (0.0.0.0), PORT ($PORT), DATABASE_PATH, and CORS matching
-  Vercel/Render subdomains via secure regex.
+Vercel Frontend:       PASS  (HTTP 200, Single-Page App loaded, SSO disabled)
+Render Backend:        PASS  (HTTP 200, Service running on Python 3.11 Uvicorn)
+Health API:            PASS  (HTTP 200, passive_mode=true, read_only=true)
+Demo Start:            PASS  (HTTP 200, state=RUNNING, CORS allowed)
+WebSocket Connection:  PASS  (Handshake 101 Switching Protocols, WSS active)
+Live Traffic Stream:   PASS  (Streaming flow_event messages received)
+Live Alerts Feed:      PASS  (Threat detections and alerts processed)
+Demo Pause:            PASS  (HTTP 200, state=PAUSED)
+Demo Resume:           PASS  (HTTP 200, state=RUNNING)
+Demo Stop:             PASS  (HTTP 200, state=STOPPED)
 
 --------------------------------------------------------------------------------
-3. HOSTING REPOSITORY
+3. ARCHITECTURE & INTEGRATION DETAILS
 --------------------------------------------------------------------------------
-GitHub Repository: https://github.com/Eric-Siju/UniGuard-AI
-Branch: main (Clean, up to date with remote origin)
-
---------------------------------------------------------------------------------
-4. DEPLOYMENT URLS & STATUS
---------------------------------------------------------------------------------
-Frontend Repository Source: https://github.com/Eric-Siju/UniGuard-AI/tree/main/frontend
-Backend Repository Source:  https://github.com/Eric-Siju/UniGuard-AI/tree/main/backend
-
-Deployment Status: FRONTEND DEPLOYED & LIVE | BACKEND BLUEPRINT READY
-- Frontend Production Build: COMPILED & LIVE ON VERCEL
-- Backend Production Server: CONFIGURED & VERIFIED (0.0.0.0:$PORT)
-- Model Artifacts: BUNDLED IN REPO (1.6 MB total, zero download required)
-- Automated Verification: 24/24 Unit/Integration Tests PASS, 10/10 Deployment Tests PASS
-
-Live Production URLs:
-- Vercel Frontend: https://uniguard-ai-sih.vercel.app (Primary)
-                   https://uniguard-ai-bhai-code1.vercel.app
-                   https://frontend-kappa-navy-65.vercel.app
-- Render Service:  https://uniguard-ai.onrender.com
-
---------------------------------------------------------------------------------
-5. ENVIRONMENT VARIABLES
---------------------------------------------------------------------------------
-Backend:
-- HOST=0.0.0.0 (required: dynamically assigned by host)
-- PORT=8000 (required: dynamically assigned by host via $PORT)
-- DATABASE_PATH=backend/uniguard.db (optional: defaults to local sqlite)
-- ALLOWED_ORIGINS=https://uniguard-ai.vercel.app,http://localhost:5173 (optional)
-- PASSIVE_MODE=true (mandatory safety guarantee)
-- READ_ONLY_MONITORING=true (mandatory safety guarantee)
-
-Frontend:
-- VITE_API_BASE_URL (optional: set to backend HTTPS URL if deployed separately;
-  leave blank if hosted under the unified Render service)
-
---------------------------------------------------------------------------------
-6. DEPLOYMENT STEPS COMPLETED AUTOMATICALLY
---------------------------------------------------------------------------------
-[x] 1. Inspected complete codebase and identified zero hardcoded localhost/127.0.0.1 in frontend.
-[x] 2. Upgraded frontend API client to support VITE_API_BASE_URL and dynamic ws/wss connection.
-[x] 3. Added Vite environment types (frontend/src/vite-env.d.ts) to resolve build types.
-[x] 4. Rebuilt frontend production bundle cleanly to frontend/dist/.
-[x] 5. Configured backend Uvicorn server to bind to 0.0.0.0:$PORT using provider $PORT.
-[x] 6. Configured CORS in FastAPI to allow production Vercel/Render subdomains via regex.
-[x] 7. Made SQLite database path configurable via DATABASE_PATH environment variable.
-[x] 8. Ensured trained Random Forest & Isolation Forest model checkpoints are bundled in repo.
-[x] 9. Updated backend/requirements.txt for cloud cross-version compatibility.
-[x] 10. Created render.yaml blueprint, vercel.json configurations, Dockerfile, and .dockerignore.
-[x] 11. Created .env.example templates and updated .gitignore.
-[x] 12. Executed complete pytest test suite (24/24 passing).
-[x] 13. Executed comprehensive deployment verification script (scripts/test_deployment.py).
-[x] 14. Staged, committed, and pushed all changes to https://github.com/Eric-Siju/UniGuard-AI.
-[x] 15. Initiated Vercel CLI device deployment flow.
-
---------------------------------------------------------------------------------
-7. TESTS PERFORMED
---------------------------------------------------------------------------------
-- Unit & Integration Tests:
-  - 24 passed in 7.39s across models, rules, engine, and API routes.
-- Deployment Verification Test Suite (scripts/test_deployment.py):
-  1. Root SPA (GET /): Status 200 (HTML delivered)
-  2. Stats API (GET /api/stats): Status 200 (Active telemetry counters)
-  3. Threats Summary (GET /api/threats/summary): Status 200 (Pre-seeded threats)
-  4. Model Evaluation (GET /api/model/evaluation): Status 200 (AUC/F1 metrics)
-  5. Demo Stream (POST /api/demo/start): Status 200 (Combined demo active)
-  6. Demo Stop (POST /api/demo/stop): Status 200 (Stream halted cleanly)
-  7. Alerts Query (GET /api/alerts): Status 200 (Retrieved generated alerts)
-  8. Asset Inventory (GET /api/assets): Status 200 (Asset risk scoring active)
-  9. Case Management (GET /api/cases): Status 200 (Case lifecycle active)
-  10. Threat Intel (GET /api/threat-intel): Status 200 (Pre-seeded IOCs verified)
-  11. WebSocket Alert Channel (/ws/alerts): Handshake OK, bidirectional ping active
-
---------------------------------------------------------------------------------
-8. REMAINING ACTIONS (ONE-CLICK USER AUTHORIZATION)
---------------------------------------------------------------------------------
-Because cloud platforms require authorization of your personal account, choose
-EITHER option below to make the live URL accessible:
-
-OPTION 1: One-Click Render Deployment (Recommended for Instant Unified URL)
-1. Go to https://dashboard.render.com/blueprints/new
-2. Connect your GitHub repository: Eric-Siju/UniGuard-AI
-3. Render automatically detects 'render.yaml' and provisions the service.
-4. Click 'Apply'.
--> Live URL: https://uniguard-ai.onrender.com (Dashboard + API + WebSocket all working)
-
-OPTION 2: One-Click Vercel Deployment (For Split Frontend)
-1. Go to https://vercel.com/new
-2. Import repository: Eric-Siju/UniGuard-AI
-3. Select Root Directory: 'frontend' (or leave root, both have vercel.json configured)
-4. Add Environment Variable:
-   - VITE_API_BASE_URL = <your-deployed-backend-url>
-5. Click 'Deploy'.
--> Live URL: https://uniguard-ai.vercel.app
-
---------------------------------------------------------------------------------
-9. KNOWN LIMITATIONS & SECURITY SAFEGUARDS
---------------------------------------------------------------------------------
-- Passive Air-Gap Monitoring Guarantee: The application will never perform active port
-  scans, packet injection, payload decryption, or automated blocking.
-- Ephemeral Hosting: SQLite databases on Render free tier reset on cold restart.
-  The application automatically runs init_db() on startup and seeds threat intel
-  and baseline rules, ensuring the demo works seamlessly after every restart.
+- Frontend: Vercel Single Page Application (React 18 + Vite + Tailwind CSS)
+  - Production build embeds VITE_API_BASE_URL=https://uniguard-ai-ntw4.onrender.com
+  - Vercel Deployment SSO Protection disabled for public access
+  - Dynamic WebSocket resolution: automatically derives wss://uniguard-ai-ntw4.onrender.com/ws/alerts
+- Backend: Render Web Service (FastAPI + Uvicorn)
+  - Hosted at https://uniguard-ai-ntw4.onrender.com
+  - CORS: Configured with regex allowing https://uniguard-ai-sih.vercel.app with credentials
+  - Passive Air-Gap Guarantees: All packet capture & stream simulation operates in
+    strictly read-only, non-interfering passive monitoring mode.
+- Verification Script: scripts/verify_live_deployment_end_to_end.py
 ================================================================================
