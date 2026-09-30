@@ -5,7 +5,7 @@ Normalizes Zeek conn.log, dns.log, and ssl.log JSON outputs into UniGuard intern
 
 import json
 import uuid
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from backend.app.engine.ingestion.base import BaseIngestionAdapter
 
 class ZeekJsonAdapter(BaseIngestionAdapter):
